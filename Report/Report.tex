@@ -54,7 +54,7 @@ If we use the same set of data to train both our standard perceptron and our mod
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{Standard-Perceptron.png}
-    \caption{Standard Perceptron (SSE = 4.21)}
+    \caption{Standard Perceptron (SSE = 4.90)}
   \end{minipage}
   \hfill
   \begin{minipage}[b]{0.4\textwidth}
@@ -78,6 +78,69 @@ y = mx + (y_0 + mx_0)\\
 \Rightarrow -(y_0 + mx_0) -mx + y
 \end{align*}
 
-So given the generic form of our standard perceptron $A + Bx + Cy$ we see here that our modified perceptron can only ever learn a representation where C = 1, limiting what we can achieve.
+So given the generic form of our standard perceptron $A + Bx + Cy$ we see here that our modified perceptron can only ever learn a representation where C = 1, limiting what we can achieve. An easy way to check this is to see what happens if we use a standard perceptron to learn the data but keep the third weight (i.e. C) fixed at 1. Sure enough we get the folowing result when we run that experement over 50000 iterations.
+
+\begin{figure}[H]
+\centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{Standard-Perceptron-(C=1).png}
+    \caption{Standard Perceptron with C = 1 (SSE = 7.56)}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+So we are able to conclude that this method is unsuitable
+
+\subsection{Normal \& Point Paramaterisation}
+This method involves learning the normal vector (which is what the standard perceptron is doing) along with a point on the hyperplane. This increaes the number of paramaters we have to learn by n (when we are in $\mathbb{R}^n$ but this is necessary as to implement a BH we have to define some neighbourhood in which we care about and to do this we need to define it around some point on our hyperplane. So consider the folowing situation, we are learning the vector $n = [n_1, ..., n_n]$ normal to our hyperplane, the vector $a = [a_1, ..., a_n]$ which is on our hyperplane and finally $b$ which is our byas. We define $x = [x_1, ..., x_n]$ as our inputs making our weighted sum
+
+\begin{align*}
+z = \sum_{i=1}^n n_i * (a_i - x_i)
+\end{align*}
+
+We are still using SSE for loss and Sigmoid for actvation.
+
+\subsubsection{Deriving Gradients}
+\begin{align}
+\frac{\partial E}{\partial W_a} = \frac{\partial E}{\partial o} \frac{\partial o}{\partial z} \frac{\partial z}{\partial W_a}
+\end{align}
+
+\begin{align}
+\frac{\partial o}{\partial z} = o(1 - o)
+\end{align}
+
+\begin{align}
+\frac{\partial E}{\partial o} = -(t - o)
+\end{align}
+
+\begin{align}
+\frac{\partial z}{\partial a_i} &= n_i\\
+\frac{\partial z}{\partial n_i} &= (a_i - x_i)\\
+\frac{\partial z}{\partial b} &= 1
+\end{align}
+
+\subsubsection{Comparason To Perceptron}
+Like before we compare the two paramaterisations using the same data and over 50000 iterations in the 2D case. In the graph for the modified perceptron the green point is our vector on the hyperplane.
+
+
+\begin{figure}[H]
+\centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{Standard-Perceptron.png}
+    \caption{Standard Perceptron (SSE = 3.90)}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{Modified-Perceptron-(Normal-Point).png}
+    \caption{Modified Perceptron (SSE = 3.90)}
+  \end{minipage}
+\end{figure}
+
+This modified perceptron has all the quallitys needed to proceid with creating the boundary hunters, whats better is this also generalizes to the $\mathbb{R}^n$ case.
+
+\section{Boundary Hunter}
+Using the \textbf{Normal \& Point Paramaterisation} from before we construct boundary hunters, first we have a simple case where the area of intererest for each boundary hunter is simpley a circle with fixed radius, our goal is to make this area of interest an ellipse which the BH will learn.
+
+\subsection{Simplified Case}
 
 \end{document}

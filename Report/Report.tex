@@ -92,7 +92,7 @@ So given the generic form of our standard perceptron $A + Bx + Cy$ we see here t
 So we are able to conclude that this method is unsuitable
 
 \subsection{Normal \& Point Paramaterisation}
-This method involves learning the normal vector (which is what the standard perceptron is doing) along with a point on the hyperplane. This increaes the number of paramaters we have to learn by n (when we are in $\mathbb{R}^n$ but this is necessary as to implement a BH we have to define some neighbourhood in which we care about and to do this we need to define it around some point on our hyperplane. So consider the folowing situation, we are learning the vector $n = [n_1, ..., n_n]$ normal to our hyperplane, the vector $a = [a_1, ..., a_n]$ which is on our hyperplane and finally $b$ which is our byas. We define $x = [x_1, ..., x_n]$ as our inputs making our weighted sum
+This method involves learning the normal vector (which is what the standard perceptron is doing) along with a point on the hyperplane. This increaes the number of paramaters we have to learn by n (when we are in $\mathbb{R}^n$ but this is necessary as to implement a BH we have to define some neighbourhood in which we care about and to do this we need to define it around some point on our hyperplane. So consider the folowing situation, we are learning the vector $n = [n_1, ..., n_n]$ normal to our hyperplane, the vector $a = [a_1, ..., a_n]$ which is on our hyperplane. We define $x = [x_1, ..., x_n]$ as our inputs making our weighted sum
 
 \begin{align*}
 z = \sum_{i=1}^n n_i * (a_i - x_i)
@@ -116,7 +116,6 @@ We are still using SSE for loss and Sigmoid for actvation.
 \begin{align}
 \frac{\partial z}{\partial a_i} &= n_i\\
 \frac{\partial z}{\partial n_i} &= (a_i - x_i)\\
-\frac{\partial z}{\partial b} &= 1
 \end{align}
 
 \subsubsection{Comparason To Perceptron}
@@ -142,5 +141,6 @@ This modified perceptron has all the quallitys needed to proceid with creating t
 Using the \textbf{Normal \& Point Paramaterisation} from before we construct boundary hunters, first we have a simple case where the area of intererest for each boundary hunter is simpley a circle with fixed radius, our goal is to make this area of interest an ellipse which the BH will learn.
 
 \subsection{Simplified Case}
+
 
 \end{document}

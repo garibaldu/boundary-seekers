@@ -110,7 +110,15 @@ We wish to convert our Perceptron into a Boundary Hunter so to begin we start wi
 \frac{1}{n} \sum_{i=0}^n r_i(C_i log(y_i) + (1-C_i)log(1-y_i)) + (1-r_i) log(1/2)
 \end{align}
 
-But how do we construct $r_i$. A logical way to do this is using a sigmoid function, we can adjust the paramaters of the function to determin the steepness, S, of the curve i.e. an S of $\infty$ would give us a step function and the closer to 0 the smoother. We define the folowing where $R$ is the radius of our area of interest and $d$ is the distance datapoint $i$ is from our point on the hyper plane.
+But how do we construct $r_i$. We would like the folowing propertys of a responsibility function
+
+\begin{enumerate}
+\item Making the area of interest include all points will reduce loss to standard log loss.
+\item All points inside the area of interest should have the same responsibility.
+\item Responsibility for points outside the area of interest should decrease as distance from area increases.
+\end{enumerate}
+
+The folowing function seems like a good place to start. The responsiblity for any point inside the area of interest is 1, and as the data points get further away the responsiblity decreases
 
 \begin{align}
 r_i = 1 - \frac{max(0, d-r)}{abs(d-r) + 0.1}
@@ -130,6 +138,12 @@ We train our boundary hunter over the same data for 10000 iterations and the res
 \end{figure}
 
 With corosponding line equation $y = -0.19877x -0.44949$. As demonstraited this line is almost identical to the one learned by a normal  \& point perceptron (descrepencies may be caused by longer training for standard perceptron). This demonstraites that this loss is not sutible
+
+\subsubsection{Justification For Results}
+So consider our loss for a given data point with target $t$, prediction $y$ and responsibility $r$. WILOG assume $t = 1$. So then we are left with $r\ log(y) + (1-r)\ log(\frac{1}{2})$. And $log(y) = log(\frac{1}{2})$ in the worst case. So we can always at least obtain an equivelent solution by setting $r = 1$ for each data point. Peforming such a thing is equivlent to including all points inside the area of interest.  
+
+\subsubsection{Reflection}
+Esentially we want to reward our boundary hunter if it is an expert in a given region, so if it gets things wrong outside its area of interest thats good, and if it gets things correct outside its area of interest then thats bad.
 
 \subsection{Loss Funcction Design: Attempt 2}
 Based on our previous findings a more in depth consideration of a suitable loss function is required. Consider the folowing properties of our ideal loss function. The basic idea is that we want to become experts in a given region

@@ -12,7 +12,7 @@
 
 \title{%
 	Machine Learning: Collectives of local decision makers\\
-	\large Formulating A Suitable Perceptron Paramaterisation
+	\large Construction Of A Boundary Hunter
 }
 \author{Daniel Braithwaite}
 
@@ -147,10 +147,12 @@ We can simplyfy these ideas into rules
 \item We should be rewarded for classifying things incorrectly our side our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point incorrectly and its just outside our area of interest then we should be rewarded).
 \end{enumerate}
 
-We now wish to convert this into a loss function. Item (1) is refering to $r_n$ multiplyed by the standard cross entropy. But now by using (1) we are doing the oposite of (2) and (3). Item (2) and (3) refer to $r_n$ multiplyed by what we call the "inverted cross entropy", here we restrict the "inverted cross entropy" to just the points that are not inside our area of interest. Where the standard cross entropy really hates to get things wrong, the inverted cross entropy really hates to get things right. So we propose the folowing as our loss where $H(t, y) = t log(y) + (1-t) log(1-y)$ is our standard cross entropy and we define $H^-(t, y) = t log(1-y) + (1-t) log(y)$ as our inverted cross entropy giving us the folowing loss function
+We now wish to convert this into a loss function. Item (1) is refering to $r_n$ multiplyed by the standard cross entropy. But now by using (1) we are doing the oposite of (2) and (3). Item (2) and (3) refer to $r_n$ multiplyed by what we call the "inverted cross entropy", here we restrict the "inverted cross entropy" to just the points that are not inside our area of interest. Where the standard cross entropy really hates to get things wrong, the inverted cross entropy really hates to get things right. So we propose the folowing as our loss where $H(t, y) = t\ log(y) + (1-t)\ log(1-y)$ is our standard cross entropy and we define $H^-(t, y) = t\ log(1-y) + (1-t)\ log(y)$ as our "inverted cross entropy" giving us the folowing loss function
 
 \begin{align}
 - \big( \frac{1}{n} \big[ \sum_{i=0}^n H(t_i, y_i) \big] + \frac{1}{|O|} \big[ \sum_{i \in O} H^{-}(t_i, y_i) \big] \big)
 \end{align}
+
+Where $O$ is the set of points not in our area of interest.
 
 \end{document}

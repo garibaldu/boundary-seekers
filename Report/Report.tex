@@ -28,25 +28,6 @@ Before worrying about this in the general case we aim to get a better understand
 \subsection{Point \& Gradient Paramaterisation}
 We are trying to optimise a point (x,y) and a gradient. This is an alternative way to paramaterise our line. We are using sum squared error for our loss function and sigmoid as our activation. Each "boundary hunter" (BH) has the folowing weights vector $W = [m, x_0, y_0]$ and we consider two inputs to our BH, x and y. Our perceptron computes $z = (y - y_0) - m(x - x_0)$ and then outputs $o = f(z) = \frac{1}{1+e^{-z}}$.
 
-\subsubsection{Deriving Gradients}
-\begin{align}
-\frac{\partial E}{\partial W_a} = \frac{\partial E}{\partial o} \frac{\partial o}{\partial z} \frac{\partial z}{\partial W_a}
-\end{align}
-
-\begin{align}
-\frac{\partial o}{\partial z} = o(1 - o)
-\end{align}
-
-\begin{align}
-\frac{\partial E}{\partial o} = -(t - o)
-\end{align}
-
-\begin{align}
-\frac{\partial z}{\partial y_0} &= -1\\
-\frac{\partial z}{\partial x_0} &= m\\
-\frac{\partial z}{\partial m} &= x_0 - x
-\end{align}
-
 \subsubsection{Comparason To Perceptron}
 If we use the same set of data to train both our standard perceptron and our modified perceptron we see that our modified dosnt quite peform as well as the standard version. For both models below they where trained for 50000 iterations of the training data.
 
@@ -100,24 +81,6 @@ z = \sum_{i=1}^n n_i * (a_i - x_i)
 
 We are still using SSE for loss and Sigmoid for actvation.
 
-\subsubsection{Deriving Gradients}
-\begin{align}
-\frac{\partial E}{\partial W_a} = \frac{\partial E}{\partial o} \frac{\partial o}{\partial z} \frac{\partial z}{\partial W_a}
-\end{align}
-
-\begin{align}
-\frac{\partial o}{\partial z} = o(1 - o)
-\end{align}
-
-\begin{align}
-\frac{\partial E}{\partial o} = -(t - o)
-\end{align}
-
-\begin{align}
-\frac{\partial z}{\partial a_i} &= n_i\\
-\frac{\partial z}{\partial n_i} &= (a_i - x_i)\\
-\end{align}
-
 \subsubsection{Comparason To Perceptron}
 Like before we compare the two paramaterisations using the same data and over 50000 iterations in the 2D case. In the graph for the modified perceptron the green point is our vector on the hyperplane.
 
@@ -140,7 +103,54 @@ This modified perceptron has all the quallitys needed to proceid with creating t
 \section{Boundary Hunter}
 Using the \textbf{Normal \& Point Paramaterisation} from before we construct boundary hunters, first we have a simple case where the area of intererest for each boundary hunter is simpley a circle with fixed radius, our goal is to make this area of interest an ellipse which the BH will learn.
 
-\subsection{Simplified Case}
+\subsection{Loss Function Design: Attempt 1}
+We wish to convert our Perceptron into a Boundary Hunter so to begin we start with designing a suitible loss function. So firstly we want to have some notion of how responsible a boundary hunter is for a given data point, for now we will just denote the responsibility for data point n by $r_n$ and worry about calculating this later. Consider our boundary hunter as reducing the uncertuanty of the classes for each of the data points. As the datapoints get further away from our radius of expertees we become more uncertain about the class of the datapoint. So a reasonable loss function is 
 
+\begin{align}
+\frac{1}{n} \sum_{i=0}^n r_i(C_i log(y_i) + (1-C_i)log(1-y_i)) + (1-r_i) log(1/2)
+\end{align}
+
+But how do we construct $r_i$. A logical way to do this is using a sigmoid function, we can adjust the paramaters of the function to determin the steepness, S, of the curve i.e. an S of $\infty$ would give us a step function and the closer to 0 the smoother. We define the folowing where $R$ is the radius of our area of interest and $d$ is the distance datapoint $i$ is from our point on the hyper plane.
+
+\begin{align}
+r_i = 1 - \frac{max(0, d-r)}{abs(d-r) + 0.1}
+\end{align}
+
+
+\subsubsection{Experemental Results}
+We train our boundary hunter over the same data for 10000 iterations and the result is somewhat uninteresting, it simply learns an area of interest which contains the entire data set, reducing our loss function to the standard cross entropy loss function 
+
+\begin{figure}[H]
+\centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt1-01.png}
+    \caption{Boundary Hunter with (1) as loss}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+With corosponding line equation $y = -0.19877x -0.44949$. As demonstraited this line is almost identical to the one learned by a normal  \& point perceptron (descrepencies may be caused by longer training for standard perceptron). This demonstraites that this loss is not sutible
+
+\subsection{Loss Funcction Design: Attempt 2}
+Based on our previous findings a more in depth consideration of a suitable loss function is required. Consider the folowing properties of our ideal loss function. The basic idea is that we want to become experts in a given region
+\begin{enumerate}
+\item As a data point gets further away from our area of interest we "care less" about our accuracy for classifying that point.
+\item Increasing area of interest should decrease the loss iff increasing the area of interest allows us to classify more points correctly.
+\item Decreasing area of interest should decrease the loss iff reducing area of interest allows us to classify less points incorrectly in our area
+\end{enumerate}
+
+We can simplyfy these ideas into rules
+
+\begin{enumerate}
+\item We want to be as accurate as possible in our area of interest and care less about our accuracy based on how "responsible" we are for the data point.
+\item We should be penalised for classifying things correctly out side our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point correctly but it is just outside our area of interest then we should be penalised).
+\item We should be rewarded for classifying things incorrectly our side our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point incorrectly and its just outside our area of interest then we should be rewarded).
+\end{enumerate}
+
+We now wish to convert this into a loss function. Item (1) is refering to $r_n$ multiplyed by the standard cross entropy. But now by using (1) we are doing the oposite of (2) and (3). Item (2) and (3) refer to $r_n$ multiplyed by what we call the "inverted cross entropy", here we restrict the "inverted cross entropy" to just the points that are not inside our area of interest. Where the standard cross entropy really hates to get things wrong, the inverted cross entropy really hates to get things right. So we propose the folowing as our loss where $H(t, y) = t log(y) + (1-t) log(1-y)$ is our standard cross entropy and we define $H^-(t, y) = t log(1-y) + (1-t) log(y)$ as our inverted cross entropy giving us the folowing loss function
+
+\begin{align}
+- \big( \frac{1}{n} \big[ \sum_{i=0}^n H(t_i, y_i) \big] + \frac{1}{|O|} \big[ \sum_{i \in O} H^{-}(t_i, y_i) \big] \big)
+\end{align}
 
 \end{document}

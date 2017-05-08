@@ -110,7 +110,9 @@ We wish to convert our Perceptron into a Boundary Hunter so to begin we start wi
 \frac{1}{n} \sum_{i=0}^n r_i(C_i log(y_i) + (1-C_i)log(1-y_i)) + (1-r_i) log(1/2)
 \end{align}
 
-But how do we construct $r_i$. We would like the folowing propertys of a responsibility function
+
+\subsection{Responsibility Function Design}
+How do we construct $r_i$. We would like the folowing propertys of a responsibility function
 
 \begin{enumerate}
 \item Making the area of interest include all points will reduce loss to standard log loss.
@@ -124,23 +126,39 @@ The folowing function seems like a good place to start. The responsiblity for an
 r_i = 1 - \frac{max(0, d-r)}{abs(d-r) + 0.1}
 \end{align}
 
+However we note that this functions isnt smooth, and that can cause problems when training with back prop, not to mention the hard boundary (i.e. responsibility 1 for all points inside area of interest) will also have a negative effect on the gradients. While its reasonable for us to want property (2) it seems unlikely we will find a sutible function meeting the condition. So we remove property (2) and add the condition that our function must be smooth. We now turn to the logistic function, Let $f = 1 - \frac{1}{1 + e^{-S(d - r)}}$, where S is the steepness of the sigmoid. We will want our responsibility function to have a low sensitivity at each extreme, i.e. a small change in distance when the point is either very close to or far from our center point should have a neglible inpact on the responsiblity. How ever we want our function to be very sensitive around the border of our area of interest. By a purely arbatary decision and from inspecting the graphs I chose to have a steppness of 10 thus giving us the folowing function
+
+\begin{align}
+r_i = 1 - \frac{1}{1 + e^{-10(x-r)}}
+\end{align}
+
+\begin{figure}[H]
+\centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{Responsibility-Function.jpg}
+    \caption{Graph of responsibility function with r = 0.1, 0.3, 0.5, 0.7, 0.9}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+While this does not meet our origonal criteria we see that for most points inside our area of interest the responsibility will be "close" to 1 and certianly above $\frac{1}{2}$, And if the area includes all the points then our loss will not reduce to the standard log loss but it will be close to it and as $r \to\infty$ we will converge to the standard log loss.
 
 \subsubsection{Experemental Results}
-We train our boundary hunter over the same data for 10000 iterations and the result is somewhat uninteresting, it simply learns an area of interest which contains the entire data set, reducing our loss function to the standard cross entropy loss function 
+We train our boundary hunter over the same data for 10000 iterations and the result is somewhat uninteresting, it simply learns an area of interest which contains no points in the data set
 
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt1-01.png}
-    \caption{Boundary Hunter with (1) as loss}
+    \caption{Boundary Hunter with (1) as loss and (3) as responsibiliy}
   \end{minipage}
   \hfill
 \end{figure}
 
-With corosponding line equation $y = -0.19877x -0.44949$. As demonstraited this line is almost identical to the one learned by a normal  \& point perceptron (descrepencies may be caused by longer training for standard perceptron). This demonstraites that this loss is not sutible
+As demonstraited using this loss does not produce any significant results.
 
 \subsubsection{Justification For Results}
-So consider our loss for a given data point with target $t$, prediction $y$ and responsibility $r$. WILOG assume $t = 1$. So then we are left with $r\ log(y) + (1-r)\ log(\frac{1}{2})$. And $log(y) = log(\frac{1}{2})$ in the worst case. So we can always at least obtain an equivelent solution by setting $r = 1$ for each data point. Peforming such a thing is equivlent to including all points inside the area of interest.  
+So consider our loss for a given data point with target $t$, prediction $y$ and responsibility $r$. WILOG assume $t = 1$. So then we are left with $r\ log(y) + (1-r)\ log(\frac{1}{2})$. We know that $log(y) \leq log(\frac{1}{2})$
 
 \subsubsection{Reflection}
 Esentially we want to reward our boundary hunter if it is an expert in a given region, so if it gets things wrong outside its area of interest thats good, and if it gets things correct outside its area of interest then thats bad.
@@ -161,12 +179,63 @@ We can simplyfy these ideas into rules
 \item We should be rewarded for classifying things incorrectly our side our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point incorrectly and its just outside our area of interest then we should be rewarded).
 \end{enumerate}
 
-We now wish to convert this into a loss function. Item (1) is refering to $r_n$ multiplyed by the standard cross entropy. But now by using (1) we are doing the oposite of (2) and (3). Item (2) and (3) refer to $r_n$ multiplyed by what we call the "inverted cross entropy", here we restrict the "inverted cross entropy" to just the points that are not inside our area of interest. Where the standard cross entropy really hates to get things wrong, the inverted cross entropy really hates to get things right. So we propose the folowing as our loss where $H(t, y) = t\ log(y) + (1-t)\ log(1-y)$ is our standard cross entropy and we define $H^-(t, y) = t\ log(1-y) + (1-t)\ log(y)$ as our "inverted cross entropy" giving us the folowing loss function
+We now wish to convert this into a loss function. Item (1) is refering to $r_n$ multiplyed by the standard cross entropy, restricted to points inside our area of interest. Then items (2) + (3) are refering to the oposite of our cross entropy multiplyed by $r_n$ restricted to all points outside our area of interest.
 
 \begin{align}
-- \big( \frac{1}{n} \big[ \sum_{i=0}^n H(t_i, y_i) \big] + \frac{1}{|O|} \big[ \sum_{i \in O} H^{-}(t_i, y_i) \big] \big)
+- \big( \frac{1}{|I|} \big[ \sum_{i \in I}^n H(t_i, y_i) \big] + \frac{1}{|O|} \big[ \sum_{i \in O} H(\not t_i, y_i) \big] \big)
 \end{align}
 
-Where $O$ is the set of points not in our area of interest.
+Where $I$ is the set of points inside our area and $O$ is the set of points not in our area of interest.
+
+\subsubsection{Experemental Results}
+
+With the same paramaters as before we train a perceptron with this loss and find equally uninteresting results. Esentailly the boundary hunter ends up positioning not doing anything useful at all
+
+\begin{figure}[H]
+\centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt2-01.png}
+    \caption{Boundary Hunter with (1) as loss and (3) as responsibiliy}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+\subsubsection{Reflection}
+The conditions used to construct this loss are prehaps to harsh, currently we are trying to maximise our error outside while minimizing our error inside. Where we dont actually care how incorrect we are outside our area.
+
+\subsection{Loss Function Design: Attempt 3}
+We take a step back and consider the basics of what we are trying to achieve. First we make an interesting observation which will change the way we approach designing this loss. Consider the simple loss function $L =\sum R(r) * CE$ where $R(r)$ is our responsibility function with radius as paramater and $CE$ is our cross entropy. And we want to compute the quantity $\frac{\partial r}{\partial L}$ so we can train r. We observe the folowing
+
+\begin{align*}
+\frac{\partial L}{\partial r} &= \frac{\partial}{\partial r} \big[ \sum R(r) * CE \big] \\
+&= \sum R^{'} (r) * CE
+\end{align*} 
+
+Namely the quantity $\frac{\partial L}{\partial r}$ dosnt actually tell us how changing the radius changes the error it simplys tells us which direction to move the radius to increase the responsitility. \textbf{CHECK THIS CLAME}.\\
+
+Returning to the loss function design it would seem that simply differentating the loss with respect to the radius wont give us what we want. So consider a naive approach of using the cross entropy loss scaled by the responsibility,
+
+\begin{align}
+frac{1}{n} \sum_{i=0}^n r_i(C_i log(y_i) + (1-C_i)log(1-y_i))
+\end{align}
+
+However now when computing $\delta r$ we insted peterb the radius and compute the gradient numerically, not ideal but somewhere to start.
+
+\subsubsection{Experemental Results}
+Using the same datasets as before we train a Boundary Hunter with this new training method and find the folowing results
+
+\begin{figure}[H]
+\centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-01.png}
+    \caption{Boundary Hunter with (1) as loss and (3) as responsibiliy}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+From this method we can observe some interesting results, seeing that we indeed learn to classify our area of interest perfectly.
+
+\subsubsection{Reflection}
+While this method does show the promise of boundary hunters we would like to avoid using such a technequic as it requires us to set how much to peterb our radius by, this is not idea as it depends very much on the density of the data.
 
 \end{document}

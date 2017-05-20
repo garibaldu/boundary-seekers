@@ -113,7 +113,7 @@ We wish to convert our Perceptron into a Boundary Hunter so to begin we start wi
 
 
 \subsection{Responsibility Function Design}
-How do we construct $r_i$. We would like the folowing propertys of a responsibility function
+How do we construct $r_i$. We would like the following property's of a responsibility function
 
 \begin{enumerate}
 \item Making the area of interest include all points will reduce loss to standard log loss.
@@ -121,13 +121,13 @@ How do we construct $r_i$. We would like the folowing propertys of a responsibil
 \item Responsibility for points outside the area of interest should decrease as distance from area increases.
 \end{enumerate}
 
-The folowing function seems like a good place to start. The responsiblity for any point inside the area of interest is 1, and as the data points get further away the responsiblity decreases
+The folowing function seems like a good place to start. The responsibility for any point inside the area of interest is 1, and as the data points get further away the responsibility decreases
 
 \begin{align}
 r_i = 1 - \frac{max(0, d-r)}{abs(d-r) + 0.1}
 \end{align}
 
-However we note that this functions isnt smooth, and that can cause problems when training with back prop, not to mention the hard boundary (i.e. responsibility 1 for all points inside area of interest) will also have a negative effect on the gradients. While its reasonable for us to want property (2) it seems unlikely we will find a sutible function meeting the condition. So we remove property (2) and add the condition that our function must be smooth. We now turn to the logistic function, Let $f = 1 - \frac{1}{1 + e^{-S(d - r)}}$, where S is the steepness of the sigmoid. We will want our responsibility function to have a low sensitivity at each extreme, i.e. a small change in distance when the point is either very close to or far from our center point should have a neglible inpact on the responsiblity. How ever we want our function to be very sensitive around the border of our area of interest. By a purely arbatary decision and from inspecting the graphs I chose to have a steppness of 10 thus giving us the folowing function
+However we note that this functions isn't smooth, and that can cause problems when training with back prop, not to mention the hard boundary (i.e. responsibility 1 for all points inside area of interest) will also have a negative effect on the gradients. While its reasonable for us to want property (2) it seems unlikely we will find a sutible function meeting the condition. So we remove property (2) and add the condition that our function must be smooth. We now turn to the logistic function, Let $f = 1 - \frac{1}{1 + e^{-S(d - r)}}$, where S is the steepness of the sigmoid. We will want our responsibility function to have a low sensitivity at each extreme, i.e. a small change in distance when the point is either very close to or far from our center point should have a negligible impact on the responsibility. How ever we want our function to be very sensitive around the border of our area of interest. By a purely arbatary decision and from inspecting the graphs I chose to have a steepness of 10 thus giving us the following function
 
 \begin{align}
 r_i = 1 - \frac{1}{1 + e^{-10(x-r)}}
@@ -142,29 +142,29 @@ r_i = 1 - \frac{1}{1 + e^{-10(x-r)}}
   \hfill
 \end{figure}
 
-While this does not meet our origonal criteria we see that for most points inside our area of interest the responsibility will be "close" to 1 and certianly above $\frac{1}{2}$, And if the area includes all the points then our loss will not reduce to the standard log loss but it will be close to it and as $r \to\infty$ we will converge to the standard log loss.
+While this does not meet our original criteria we see that for most points inside our area of interest the responsibility will be "close" to 1 and certainly above $\frac{1}{2}$, And if the area includes all the points then our loss will not reduce to the standard log loss but it will be close to it and as $r \to\infty$ we will converge to the standard log loss.
 
-\subsubsection{Experemental Results}
+\subsubsection{Experimental Results}
 We train our boundary hunter over the same data for 10000 iterations and the result is somewhat uninteresting, it simply learns an area of interest which contains no points in the data set
 
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt1-01.png}
-    \caption{Boundary Hunter with (1) as loss and (3) as responsibiliy}
+    \caption{Boundary Hunter with (1) as loss and (3) as responsibility}
   \end{minipage}
   \hfill
 \end{figure}
 
-As demonstraited using this loss does not produce any significant results.
+As demonstrated using this loss does not produce any significant results.
 
 \subsubsection{Justification For Results}
 So consider our loss for a given data point with target $t$, prediction $y$ and responsibility $r$. WILOG assume $t = 1$. So then we are left with $r\ log(y) + (1-r)\ log(\frac{1}{2})$. We know that $log(y) \leq log(\frac{1}{2})$
 
 \subsubsection{Reflection}
-Esentially we want to reward our boundary hunter if it is an expert in a given region, so if it gets things wrong outside its area of interest thats good, and if it gets things correct outside its area of interest then thats bad.
+Essentially we want to reward our boundary hunter if it is an expert in a given region, so if it gets things wrong outside its area of interest thats good, and if it gets things correct outside its area of interest then thats bad.
 
-\subsection{Loss Funcction Design: Attempt 2}
+\subsection{Loss Function Design: Attempt 2}
 Based on our previous findings a more in depth consideration of a suitable loss function is required. Consider the folowing properties of our ideal loss function. The basic idea is that we want to become experts in a given region
 \begin{enumerate}
 \item As a data point gets further away from our area of interest we "care less" about our accuracy for classifying that point.
@@ -172,15 +172,15 @@ Based on our previous findings a more in depth consideration of a suitable loss 
 \item Decreasing area of interest should decrease the loss iff reducing area of interest allows us to classify less points incorrectly in our area
 \end{enumerate}
 
-We can simplyfy these ideas into rules
+We can simplify these ideas into rules
 
 \begin{enumerate}
 \item We want to be as accurate as possible in our area of interest and care less about our accuracy based on how "responsible" we are for the data point.
-\item We should be penalised for classifying things correctly out side our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point correctly but it is just outside our area of interest then we should be penalised).
+\item We should be penalized for classifying things correctly out side our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point correctly but it is just outside our area of interest then we should be penalised).
 \item We should be rewarded for classifying things incorrectly our side our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point incorrectly and its just outside our area of interest then we should be rewarded).
 \end{enumerate}
 
-We now wish to convert this into a loss function. Item (1) is refering to $r_n$ multiplyed by the standard cross entropy, restricted to points inside our area of interest. Then items (2) + (3) are refering to the oposite of our cross entropy multiplyed by $r_n$ restricted to all points outside our area of interest.
+We now wish to convert this into a loss function. Item (1) is referring to $r_n$ multiplied by the standard cross entropy, restricted to points inside our area of interest. Then items (2) + (3) are referring to the opposite of our cross entropy multiplied by $r_n$ restricted to all points outside our area of interest.
 
 \begin{align}
 - \big( \frac{1}{|I|} \big[ \sum_{i \in I}^n H(t_i, y_i) \big] + \frac{1}{|O|} \big[ \sum_{i \in O} H(\not t_i, y_i) \big] \big)
@@ -188,56 +188,56 @@ We now wish to convert this into a loss function. Item (1) is refering to $r_n$ 
 
 Where $I$ is the set of points inside our area and $O$ is the set of points not in our area of interest.
 
-\subsubsection{Experemental Results}
+\subsubsection{Experimental Results}
 
-With the same paramaters as before we train a perceptron with this loss and find equally uninteresting results. Esentailly the boundary hunter ends up positioning not doing anything useful at all
+With the same parameters as before we train a perception with this loss and find equally uninteresting results. Essentially the boundary hunter ends up positioning not doing anything useful at all
 
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt2-01.png}
-    \caption{Boundary Hunter with (?) as loss and (3) as responsibiliy}
+    \caption{Boundary Hunter with (?) as loss and (3) as responsibility}
   \end{minipage}
   \hfill
 \end{figure}
 
 \subsubsection{Reflection}
-The conditions used to construct this loss are prehaps to harsh, currently we are trying to maximise our error outside while minimizing our error inside. Where we dont actually care how incorrect we are outside our area.
+The conditions used to construct this loss are perhaps to harsh, currently we are trying to maximize our error outside while minimizing our error inside. Where we don't actually care how incorrect we are outside our area.
 
 \subsection{Loss Function Design: Important Observation}
-We take a step back and consider the basics of what we are trying to achieve. First we make an interesting observation which will change the way we approach designing this loss. Consider the simple loss function $L =\sum R(r) * CE$ where $R(r)$ is our responsibility function with radius as paramater and $CE$ is our cross entropy. And we want to compute the quantity $\frac{\partial r}{\partial L}$ so we can train r. We observe the folowing
+We take a step back and consider the basics of what we are trying to achieve. First we make an interesting observation which will change the way we approach designing this loss. Consider the simple loss function $L =\sum R(r) * CE$ where $R(r)$ is our responsibility function with radius as parameter and $CE$ is our cross entropy. And we want to compute the quantity $\frac{\partial r}{\partial L}$ so we can train r. We observe the following
 
 \begin{align*}
 \frac{\partial L}{\partial r} &= \frac{\partial}{\partial r} \big[ \sum R(r) * CE \big] \\
 &= \sum R^{'} (r) * CE
 \end{align*} 
 
-Namely the quantity $\frac{\partial L}{\partial r}$ dosnt actually tell us how changing the radius changes the error it simplys tells us which direction to move the radius to increase the responsitility. This results in the radius constantly increasing.\\
+Namely the quantity $\frac{\partial L}{\partial r}$ dosnt actually tell us how changing the radius changes the error it simplys tells us which direction to move the radius to increase the responsibility. This results in the radius constantly increasing.\\
 
 \subsection{Loss Function Design: Attempt 3}
-Based on what we just observed we need a new approach. We consider our boundary hunter as a sales man, who gets paied $\$B$ for selling something to someone who wants it (if the sales man is respoinbile for this individual) and gets penalised $\$C$ dollars for selling something to someone who dosnt want it. Using this model, the sales man's is to position them selves and adjust there responsibility so that they are maximising there proffit. Now we simply must quantify this. We know $y^t(1-y)^{t-1}$ is the probability we get something right (probability we are selling to someone who wants what we are selling). We arrive at the folowing quantity.
+Based on what we just observed we need a new approach. We consider our boundary hunter as a sales man, who gets paid $\$B$ for selling something to someone who wants it (if the sales man is responsible for this individual) and gets penalized $\$C$ dollars for selling something to someone who dosnt want it. Using this model, the sales man's is to position them selves and adjust there responsibility so that they are maximizing there profit. Now we simply must quantify this. We know $y^t(1-y)^{t-1}$ is the probability we get something right (probability we are selling to someone who wants what we are selling). We arrive at the flowing quantity.
 
 \begin{align}
 L = \sum_{i=0} r_i * \big[ By_i^{t_i}(1-y_i)^{1-t_i} - Cy_i^{1-t_i}(1-y_i)^{t_i} \big] 
 \end{align}
 
-While intially it seemes like this would suffer from the same problem described in the previous observation it does not. Consider the differential we know that $R^{'}(r)$ will always have the same sign but $By_i^{t_i}(1-y_i)^{1-t_i} - Cy_i^{1-t_i}(1-y_i)^{t_i}$ can be both positive and negative, so we end up in the situation where if we are lossing more money that we are gaining then we will decreases our radius but if we are gaining more money than we are lossing we will increase our radius
+While initially it seemed like this would suffer from the same problem described in the previous observation it does not. Consider the differential we know that $R^{'}(r)$ will always have the same sign but $By_i^{t_i}(1-y_i)^{1-t_i} - Cy_i^{1-t_i}(1-y_i)^{t_i}$ can be both positive and negative, so we end up in the situation where if we are losing more money that we are gaining then we will decreases our radius but if we are gaining more money than we are losing we will increase our radius
 
-\subsubsection{Experemental Results}
+\subsubsection{Experimental Results}
 
-With the same paramaters as before we train a perceptron with this loss and find that it grows to fit all the data
+With the same parameters as before we train a perception with this loss and find that it grows to fit all the data
 
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-R2.png}
-    \caption{Boundary Hunter with (?) as loss and (3) as responsibiliy}
+    \caption{Boundary Hunter with (?) as loss and (3) as responsibility}
   \end{minipage}
   \hfill
 \end{figure}
 
 \subsubsection{Loss Investigation}
-To get a better idea of peformance we will execute a boundary hunter with this loss over various random initial conditions to get a feel for how it works, the results are somewhat dissapointing however
+To get a better idea of performance we will execute a boundary hunter with this loss over various random initial conditions to get a feel for how it works, the results are somewhat disappointing however
 
 \begin{figure}[H]
 \centering
@@ -248,33 +248,33 @@ To get a better idea of peformance we will execute a boundary hunter with this l
 \subfloat[]{\includegraphics[width=0.3\textwidth]{BoundaryHunter-Attempt3-R2.png}}
 \end{figure}
 
-This approach definitly seemes to favour moving off to the side of the data. While (c) seems like a reasonable solution and actually contains some points in its area of interest
+This approach definitely seems to favor moving off to the side of the data. While (c) seems like a reasonable solution and actually contains some points in its area of interest
 
 \subsubsection{Justification For Results}
 Using the responsibility to scale the loss in this way encourages the boundary hunter to "run away" from the data because anything outside its area of interest will have a significantly lower responsibility than anything inside, So even by getting everything right inside our area we can achieve a better loss by moving away from the data and things we might be getting wrong outside our area.
 
 \subsubsection{Reflection}
-While we need to use the responsibility in some reguard, using it directly in the loss function does not provide the results we are looking for.
+While we need to use the responsibility in some regard, using it directly in the loss function does not provide the results we are looking for.
 
 
 \subsection{Loss Function Design: Attempt 4}
-Continuing with the same analgey as before (the sales man trying to maximise there profit). Except now we only sell to people inside our area of interest and anyone outside we dont care about. This will solve the problem of boundary hunter "escaping" the data. If we are earning lots of money from selling inside our area then we wish to expand the region we are selling to and then if we are loosing lots of money we want to reduce the region we are selling to. This corosponds to the same loss as Attempt 3 however now we are restircting our loss to only care about points inside our area. This way we are optimising our hyperplane only for the points we care about.
+Continuing with the same analgey as before (the sales man trying to maximize there profit). Except now we only sell to people inside our area of interest and anyone outside we don't care about. This will solve the problem of boundary hunter "escaping" the data. If we are earning lots of money from selling inside our area then we wish to expand the region we are selling to and then if we are loosing lots of money we want to reduce the region we are selling to. This corresponds to the same loss as Attempt 3 however now we are restricting our loss to only care about points inside our area. This way we are optimizing our hyperplane only for the points we care about.
 
-However we have to define the gradient of the radius as it nolonger exsists, we set it to be $\frac{\partial L}{\partial r} = sgn(loss)$  so we get -1 if the loss is negative, 0 if the loss is, and 1 if the loss is positive
+However we have to define the gradient of the radius as it no longer exists, we set it to be $\frac{\partial L}{\partial r} = sgn(loss)$  so we get -1 if the loss is negative, 0 if the loss is, and 1 if the loss is positive
 
-\subsubsection{Experemental Results}
+\subsubsection{Experimental Results}
 In our example data there are many more of one class than the other and using this method rewards the boundary hunter for just classifying everything as the one class and including everything inside our range.
 
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt4-01.png}
-    \caption{Boundary Hunter with (?) as loss and (3) as responsibiliy}
+    \caption{Boundary Hunter with (?) as loss and (3) as responsibility}
   \end{minipage}
   \hfill
 \end{figure}
 
-However our loss gives us a knob which we can turn, changing how much we care about getting things wrong or getting them right, we can adjust this knob so that we hate getting things wrong more. We set our cost multiplyer to be $1 + (\frac{65}{100})$, and profit multipler to  $1 + (\frac{35}{100})$. The aim of this is to balance out the proportions of points.
+However our loss gives us a knob which we can turn, changing how much we care about getting things wrong or getting them right, we can adjust this knob so that we hate getting things wrong more. We set our cost multiplier to be $1 + (\frac{65}{100})$, and profit multiple to  $1 + (\frac{35}{100})$. The aim of this is to balance out the proportions of points.
 
 \begin{figure}[H]
 \centering
@@ -284,7 +284,7 @@ However our loss gives us a knob which we can turn, changing how much we care ab
   \end{minipage}
   \hfill
 \end{figure}
-While this looks like ezactly what we want, this is just a coincidence! Now we encouter an issue with the loss reaching 0 and then staying there, esentially bringing training to a halt, to fix this we count a loss of 0 as making us want to increase our region. While this does get things moving the boundary hunters like to keep there regions small. Experementing with this implementation, starting with random initial conditions will allow us to get a better feel for wether this is working or not.
+While this looks like exactly what we want, this is just a coincidence! Now we encounter an issue with the loss reaching 0 and then staying there, essentially bringing training to a halt, to fix this we count a loss of 0 as making us want to increase our region. While this does get things moving the boundary hunters like to keep there regions small. Experimenting with this implementation, starting with random initial conditions will allow us to get a better feel for whether this is working or not.
 
 \begin{figure}[H]
 \centering
@@ -293,6 +293,8 @@ While this looks like ezactly what we want, this is just a coincidence! Now we e
   \subfloat[]{\includegraphics[width=0.4\textwidth]{BoundaryHunter-Attempt4-04.png}}
 \end{figure}
 
-While these results still seem interesting and the approach seemes promising but radiuses are to small to produce any meaningful results. How can we improve this loss to consider larger regions.
+While these results still seem interesting and the approach seems promising but radius's are to small to produce any meaningful results. How can we improve this loss to consider larger regions.
+
+
 
 \end{document}

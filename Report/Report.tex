@@ -5,6 +5,7 @@
 \usepackage{amssymb}
 \usepackage{float}
 \usepackage{graphicx}
+\usepackage{subfig}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 
@@ -195,7 +196,7 @@ With the same paramaters as before we train a perceptron with this loss and find
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt2-01.png}
-    \caption{Boundary Hunter with (1) as loss and (3) as responsibiliy}
+    \caption{Boundary Hunter with (?) as loss and (3) as responsibiliy}
   \end{minipage}
   \hfill
 \end{figure}
@@ -203,7 +204,7 @@ With the same paramaters as before we train a perceptron with this loss and find
 \subsubsection{Reflection}
 The conditions used to construct this loss are prehaps to harsh, currently we are trying to maximise our error outside while minimizing our error inside. Where we dont actually care how incorrect we are outside our area.
 
-\subsection{Loss Function Design: Attempt 3}
+\subsection{Loss Function Design: Important Observation}
 We take a step back and consider the basics of what we are trying to achieve. First we make an interesting observation which will change the way we approach designing this loss. Consider the simple loss function $L =\sum R(r) * CE$ where $R(r)$ is our responsibility function with radius as paramater and $CE$ is our cross entropy. And we want to compute the quantity $\frac{\partial r}{\partial L}$ so we can train r. We observe the folowing
 
 \begin{align*}
@@ -211,31 +212,87 @@ We take a step back and consider the basics of what we are trying to achieve. Fi
 &= \sum R^{'} (r) * CE
 \end{align*} 
 
-Namely the quantity $\frac{\partial L}{\partial r}$ dosnt actually tell us how changing the radius changes the error it simplys tells us which direction to move the radius to increase the responsitility. \textbf{CHECK THIS CLAME}.\\
+Namely the quantity $\frac{\partial L}{\partial r}$ dosnt actually tell us how changing the radius changes the error it simplys tells us which direction to move the radius to increase the responsitility. This results in the radius constantly increasing.\\
 
-Returning to the loss function design it would seem that simply differentating the loss with respect to the radius wont give us what we want. So consider a naive approach of using the cross entropy loss scaled by the responsibility,
+\subsection{Loss Function Design: Attempt 3}
+Based on what we just observed we need a new approach. We consider our boundary hunter as a sales man, who gets paied $\$B$ for selling something to someone who wants it (if the sales man is respoinbile for this individual) and gets penalised $\$C$ dollars for selling something to someone who dosnt want it. Using this model, the sales man's is to position them selves and adjust there responsibility so that they are maximising there proffit. Now we simply must quantify this. We know $y^t(1-y)^{t-1}$ is the probability we get something right (probability we are selling to someone who wants what we are selling). We arrive at the folowing quantity.
 
 \begin{align}
-frac{1}{n} \sum_{i=0}^n r_i(C_i log(y_i) + (1-C_i)log(1-y_i))
+L = \sum_{i=0} r_i * \big[ By_i^{t_i}(1-y_i)^{1-t_i} - Cy_i^{1-t_i}(1-y_i)^{t_i} \big] 
 \end{align}
 
-However now when computing $\delta r$ we insted peterb the radius and compute the gradient numerically, not ideal but somewhere to start.
+While intially it seemes like this would suffer from the same problem described in the previous observation it does not. Consider the differential we know that $R^{'}(r)$ will always have the same sign but $By_i^{t_i}(1-y_i)^{1-t_i} - Cy_i^{1-t_i}(1-y_i)^{t_i}$ can be both positive and negative, so we end up in the situation where if we are lossing more money that we are gaining then we will decreases our radius but if we are gaining more money than we are lossing we will increase our radius
 
 \subsubsection{Experemental Results}
-Using the same datasets as before we train a Boundary Hunter with this new training method and find the folowing results
+
+With the same paramaters as before we train a perceptron with this loss and find that it grows to fit all the data
 
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
-    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-01.png}
-    \caption{Boundary Hunter with (1) as loss and (3) as responsibiliy}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-R2.png}
+    \caption{Boundary Hunter with (?) as loss and (3) as responsibiliy}
   \end{minipage}
   \hfill
 \end{figure}
 
-From this method we can observe some interesting results, seeing that we indeed learn to classify our area of interest perfectly.
+\subsubsection{Loss Investigation}
+To get a better idea of peformance we will execute a boundary hunter with this loss over various random initial conditions to get a feel for how it works, the results are somewhat dissapointing however
+
+\begin{figure}[H]
+\centering
+  \subfloat[]{\includegraphics[width=0.3\textwidth]{BoundaryHunter-Attempt3-R0.png}}
+  \hfill
+  \subfloat[]{\includegraphics[width=0.3\textwidth]{BoundaryHunter-Attempt3-R1.png}}
+\hfill
+\subfloat[]{\includegraphics[width=0.3\textwidth]{BoundaryHunter-Attempt3-R2.png}}
+\end{figure}
+
+This approach definitly seemes to favour moving off to the side of the data. While (c) seems like a reasonable solution and actually contains some points in its area of interest
+
+\subsubsection{Justification For Results}
+Using the responsibility to scale the loss in this way encourages the boundary hunter to "run away" from the data because anything outside its area of interest will have a significantly lower responsibility than anything inside, So even by getting everything right inside our area we can achieve a better loss by moving away from the data and things we might be getting wrong outside our area.
 
 \subsubsection{Reflection}
-While this method does show the promise of boundary hunters we would like to avoid using such a technequic as it requires us to set how much to peterb our radius by, this is not idea as it depends very much on the density of the data.
+While we need to use the responsibility in some reguard, using it directly in the loss function does not provide the results we are looking for.
+
+
+\subsection{Loss Function Design: Attempt 4}
+Continuing with the same analgey as before (the sales man trying to maximise there profit). Except now we only sell to people inside our area of interest and anyone outside we dont care about. This will solve the problem of boundary hunter "escaping" the data. If we are earning lots of money from selling inside our area then we wish to expand the region we are selling to and then if we are loosing lots of money we want to reduce the region we are selling to. This corosponds to the same loss as Attempt 3 however now we are restircting our loss to only care about points inside our area. This way we are optimising our hyperplane only for the points we care about.
+
+However we have to define the gradient of the radius as it nolonger exsists, we set it to be $\frac{\partial L}{\partial r} = sgn(loss)$  so we get -1 if the loss is negative, 0 if the loss is, and 1 if the loss is positive
+
+\subsubsection{Experemental Results}
+In our example data there are many more of one class than the other and using this method rewards the boundary hunter for just classifying everything as the one class and including everything inside our range.
+
+\begin{figure}[H]
+\centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt4-01.png}
+    \caption{Boundary Hunter with (?) as loss and (3) as responsibiliy}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+However our loss gives us a knob which we can turn, changing how much we care about getting things wrong or getting them right, we can adjust this knob so that we hate getting things wrong more. We set our cost multiplyer to be $1 + (\frac{65}{100})$, and profit multipler to  $1 + (\frac{35}{100})$. The aim of this is to balance out the proportions of points.
+
+\begin{figure}[H]
+\centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt4-02.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+\end{figure}
+While this looks like ezactly what we want, this is just a coincidence! Now we encouter an issue with the loss reaching 0 and then staying there, esentially bringing training to a halt, to fix this we count a loss of 0 as making us want to increase our region. While this does get things moving the boundary hunters like to keep there regions small. Experementing with this implementation, starting with random initial conditions will allow us to get a better feel for wether this is working or not.
+
+\begin{figure}[H]
+\centering
+  \subfloat[]{\includegraphics[width=0.4\textwidth]{BoundaryHunter-Attempt4-03.png}}
+  \hfill
+  \subfloat[]{\includegraphics[width=0.4\textwidth]{BoundaryHunter-Attempt4-04.png}}
+\end{figure}
+
+While these results still seem interesting and the approach seemes promising but radiuses are to small to produce any meaningful results. How can we improve this loss to consider larger regions.
 
 \end{document}

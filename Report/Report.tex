@@ -231,23 +231,23 @@ Not quite the results we where looking for but this outcome makes sense as there
 
 \begin{figure}[H]
   \centering
-  \begin{minipage}[b]{0.3\textwidth}
+  \begin{minipage}[b]{0.49\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-02.png}
     \caption{C = 1.3}
   \end{minipage}
   \hfill
-  \begin{minipage}[b]{0.3\textwidth}
+  \begin{minipage}[b]{0.49\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-03.png}
     \caption{C = 1.6}
   \end{minipage}
   \hfill
-  \begin{minipage}[b]{0.3\textwidth}
+  \begin{minipage}[b]{0.49\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-04.png}
     \caption{C = 1.9}
   \end{minipage}
 \end{figure}
 
-How ever this only seems to change the positioning of the hyperplane and not the radius of our area of interest. If we impose some reasonable restrictions on the radius (i.e. $0.3 \leq r \leq 0.8$), set our C = 2 and adjust the responsibility function to be less steep then we can achieve some results which seem interesting
+How ever this only seems to change the positioning of the hyperplane and not the radius of our area of interest. If we impose some reasonable restrictions on the radius (i.e. $0.3 \leq r \leq 0.8$), set our C = 2 and adjust the responsibility function to be less steep (steepness of 5) then we can achieve some results which seem interesting
 
 \begin{figure}[H]
   \centering
@@ -274,7 +274,7 @@ However more often than not we get results like following uninteresting ones
   \hfill
 \end{figure}
 
-The issue appears to be that of local optima, the solutions looking like what we want (Figure 13 and 14) certainly have lower error the boundary hunter appears to have trouble escaping local optima to find these solutions.
+The issue appears to be that of local optima, the solutions looking like what we want (Figure 13 and 14) certainly have lower error than when the solutioin is outside the data however the boundary hunter appears to have trouble escaping local optima to find these more interesting solutions.
 
 To confirm this we look to plot the landscape of the loss function. To do this we will fix the radius and and the hyperplane position while varying the x and y position of the point, The parameters we fix for hyperplane are what we would want if trying to place our self on the left side of the chevron . Using the parameters as above, (steepness of 5, C = 2) We get the following plots.
 

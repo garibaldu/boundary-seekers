@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import random
 import math
 
+plt.switch_backend("TkAgg")
+
 def generateChevronData():
     xBounds = [-50, 50]
     yBounds = [-50, 50]
@@ -26,23 +28,23 @@ def generateChevronData():
         
     return np.array(points), np.array(targets)
     
-def plotScatter(points):
+def plotScatter(points, color):
     xs = [x[0] for x in points]
     ys = [y[1] for y in points]
     
-    plt.scatter(xs, ys)
+    plt.scatter(xs, ys, c=color)
 
 
 def sigmoid(tensor):
     return 1.0/(1.0 + tf.exp(-tensor))
 
-C = tf.constant(2.5, 'float64', name='C')
+C = tf.constant(2.0, 'float64', name='C')
 B = tf.constant(1.0, 'float64', name='B')
 
 # Construct Weights
-#weights = tf.Variable(np.random.rand(5), 'weights')
-weights = tf.Variable(np.array([-1.0, 1.0, 0.0, -0.0]), 'weights', dtype='float64')
-radius = tf.Variable(0.8, 'radius', dtype='float64')
+weights = tf.Variable(np.random.rand(4), 'weights')
+#weights = tf.Variable(np.array([-1.0, 1.0, 0.0, -0.0]), 'weights', dtype='float64')
+radius = tf.Variable(0.5, 'radius', dtype='float64')
 normal = [weights[0], weights[1]]
 point = [weights[2], weights[3]]
 
@@ -57,7 +59,7 @@ inputs_prime = tf.subtract(inputs, point)
 predictions = sigmoid(tf.matmul(inputs_prime, tf.expand_dims(normal, 1)))
 
 # Compute the responsibility
-responsiblity = 1 - (1/(1 + tf.exp(-(10.0)*(tf.reduce_sum(tf.pow(inputs_prime, 2), 1) - radius))))
+responsiblity = 1 - (1/(1 + tf.exp(-(5.0)*(tf.reduce_sum(tf.pow(inputs_prime, 2), 1) - radius))))
 
 # Compute the probobality of being right
 p_right = tf.multiply(tf.pow(predictions, tf.expand_dims(targets, 1)), tf.pow(1-predictions, tf.expand_dims(1-targets, 1)))
@@ -67,12 +69,12 @@ p_wrong = tf.multiply(tf.pow(predictions, tf.expand_dims(1-targets, 1)), tf.pow(
 
 profit = tf.reduce_sum(tf.multiply(tf.expand_dims(responsiblity, 1), tf.subtract(tf.multiply(C, p_wrong), tf.multiply(B, p_right))))
 
-train_op = tf.train.GradientDescentOptimizer(0.0001).minimize(profit)
+train_op = tf.train.GradientDescentOptimizer(0.001).minimize(profit)
 train_op_weights = tf.train.GradientDescentOptimizer(0.001).minimize(profit, var_list=[weights])
 train_op_radius = tf.train.GradientDescentOptimizer(0.001).minimize(profit, var_list=[radius])
 
 
-clip_radius = tf.assign(radius, tf.clip_by_value(radius, 0.3, 1.0))
+clip_radius = tf.assign(radius, tf.clip_by_value(radius, 0.3, 0.8))
 
 # Set up the data
 random.seed(1234)
@@ -85,13 +87,14 @@ with tf.Session() as session:
     print(session.run(weights))
     print(session.run(radius))
     print()
-    #for i in range(1000):
-        #session.run
-    for i in range(20):
+    #for i in range(10000):
+    #    session.run(train_op, feed_dict={inputs:points, targets:out})
+    #    session.run(clip_radius)
+    for i in range(10):
         for j in range(100):
             session.run(train_op_weights, feed_dict={inputs:points, targets:out})
 
-        for j in range(1000):
+        for j in range(100):
             session.run(train_op_radius, feed_dict={inputs:points, targets:out})
             session.run(clip_radius)
 
@@ -118,10 +121,10 @@ for i in range(0, len(points)):
 print("Type 0: ", len(c1))
 print("Type 1: ", len(c2))
         
-plotScatter(c1)
-plotScatter(c2)
+plotScatter(c1,'y')
+plotScatter(c2, 'b')
 
-plt.scatter(weights_value[2], weights_value[3])
+plt.scatter(weights_value[2], weights_value[3], c='g')
 
 n = np.array([weights_value[0] * weights_value[2] + weights_value[1] * weights_value[3], 
               -weights_value[0], 

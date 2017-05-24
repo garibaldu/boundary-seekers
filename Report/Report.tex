@@ -21,16 +21,16 @@
 
 \maketitle
 
-The goal of this project is to create neurons which insted of searching for a global minumum they will choose a specific part of the data to place their hyperplane. Consider the folowing situation in $\mathbb{R}^2$ where we have data split into two classes and the second class is boxed into a chevron shape. A single perceptron will go and place a horizonal line through the plane however this isnt telling us anything interesting. Prehaps something better to do is to align its self to one of the sides of the chevron, then if we added another "boundary hunter" it could align its self to the other side of the chevron.
+The goal of this project is to create neurons which instead of searching for a global minimum they will choose a specific part of the data to place their hyperplane. Consider the following situation in $\mathbb{R}^2$ where we have data split into two classes and the second class is boxed into a chevron shape. A single perceptron will go and place a horizontal line through the plane however this isn't telling us anything interesting. Perhaps something better to do is to align its self to one of the sides of the chevron, then if we added another "boundary hunter" it could align its self to the other side of the chevron.
 
 \section{Simplified Situation}
-Before worrying about this in the general case we aim to get a better understanding of the problem by first trying to solve the case described above. We first make some changes to how we have paramaterised our perceptron. We want to find a way which peforms the same as a standard perceptron before we start making it into a boundary hunter
+Before worrying about this in the general case we aim to get a better understanding of the problem by first trying to solve the case described above. We first make some changes to how we have parameterized our perceptron. We want to find a way which performs the same as a standard perceptron before we start making it into a boundary hunter
 
 \subsection{Point \& Gradient Paramaterisation}
-We are trying to optimise a point (x,y) and a gradient. This is an alternative way to paramaterise our line. We are using sum squared error for our loss function and sigmoid as our activation. Each "boundary hunter" (BH) has the folowing weights vector $W = [m, x_0, y_0]$ and we consider two inputs to our BH, x and y. Our perceptron computes $z = (y - y_0) - m(x - x_0)$ and then outputs $o = f(z) = \frac{1}{1+e^{-z}}$.
+We are trying to optimize a point (x,y) and a gradient. This is an alternative way to paramaterise our line. We are using sum squared error for our loss function and sigmoid as our activation. Each "boundary hunter" (BH) has the following weights vector $W = [m, x_0, y_0]$ and we consider two inputs to our BH, x and y. Our perceptron computes $z = (y - y_0) - m(x - x_0)$ and then outputs $o = f(z) = \frac{1}{1+e^{-z}}$.
 
-\subsubsection{Comparason To Perceptron}
-If we use the same set of data to train both our standard perceptron and our modified perceptron we see that our modified dosnt quite peform as well as the standard version. For both models below they where trained for 50000 iterations of the training data.
+\subsubsection{Comparison To Perceptron}
+If we use the same set of data to train both our standard perceptron and our modified perceptron we see that our modified doesn't quite perform as well as the standard version. For both models below they where trained for 50000 iterations of the training data.
 
 \begin{figure}[H]
 \centering
@@ -45,7 +45,7 @@ If we use the same set of data to train both our standard perceptron and our mod
   \end{minipage}
 \end{figure}
 
-I propose that this way of constructing our perceptron is less powerful than the standard way. Consider when we are optimising our point-slope representation, 
+I propose that this way of constructing our perceptron is less powerful than the standard way. Consider when we are optimizing our point-slope representation, 
 
 \begin{align*}
 y - y_0 &= m(x - x_0) \\
@@ -53,14 +53,14 @@ y &= y_0 + mx - mx_0 \\
 y &= mx + (y_0 + mx_0)
 \end{align*}
 
-We have just shown that (as we would expect) we can convert out point-slope representation into a intercept-slope representation. From here we see we can convert into something that could be represented by our origonal perceptron.
+We have just shown that (as we would expect) we can convert out point-slope representation into a intercept-slope representation. From here we see we can convert into something that could be represented by our original perceptron.
 
 \begin{align*}
 y = mx + (y_0 + mx_0)\\
 \Rightarrow -(y_0 + mx_0) -mx + y
 \end{align*}
 
-So given the generic form of our standard perceptron $A + Bx + Cy$ we see here that our modified perceptron can only ever learn a representation where C = 1, limiting what we can achieve. An easy way to check this is to see what happens if we use a standard perceptron to learn the data but keep the third weight (i.e. C) fixed at 1. Sure enough we get the folowing result when we run that experement over 50000 iterations.
+So given the generic form of our standard perceptron $A + Bx + Cy$ we see here that our modified perceptron can only ever learn a representation where C = 1, limiting what we can achieve. An easy way to check this is to see what happens if we use a standard perceptron to learn the data but keep the third weight (i.e. C) fixed at 1. Sure enough we get the following result when we run that experiment over 50000 iterations.
 
 \begin{figure}[H]
 \centering
@@ -74,16 +74,16 @@ So given the generic form of our standard perceptron $A + Bx + Cy$ we see here t
 So we are able to conclude that this method is unsuitable
 
 \subsection{Normal \& Point Paramaterisation}
-This method involves learning the normal vector (which is what the standard perceptron is doing) along with a point on the hyperplane. This increaes the number of paramaters we have to learn by n (when we are in $\mathbb{R}^n$ but this is necessary as to implement a BH we have to define some neighbourhood in which we care about and to do this we need to define it around some point on our hyperplane. So consider the folowing situation, we are learning the vector $n = [n_1, ..., n_n]$ normal to our hyperplane, the vector $a = [a_1, ..., a_n]$ which is on our hyperplane. We define $x = [x_1, ..., x_n]$ as our inputs making our weighted sum
+This method involves learning the normal vector (which is what the standard perceptron is doing) along with a point on the hyperplane. This increases the number of parameters we have to learn by n (when we are in $\mathbb{R}^n$ but this is necessary as to implement a BH we have to define some neighborhood in which we care about and to do this we need to define it around some point on our hyperplane. So consider the following situation, we are learning the vector $n = [n_1, ..., n_n]$ normal to our hyperplane, the vector $a = [a_1, ..., a_n]$ which is on our hyperplane. We define $x = [x_1, ..., x_n]$ as our inputs making our weighted sum
 
 \begin{align*}
 z = \sum_{i=1}^n n_i * (a_i - x_i)
 \end{align*}
 
-We are still using SSE for loss and Sigmoid for actvation.
+We are still using SSE for loss and Sigmoid for activation.
 
-\subsubsection{Comparason To Perceptron}
-Like before we compare the two paramaterisations using the same data and over 50000 iterations in the 2D case. In the graph for the modified perceptron the green point is our vector on the hyperplane.
+\subsubsection{Comparison To Perceptron}
+Like before we compare the two parameterizations using the same data and over 50000 iterations in the 2D case. In the graph for the modified perceptron the green point is our vector on the hyperplane.
 
 
 \begin{figure}[H]
@@ -99,13 +99,13 @@ Like before we compare the two paramaterisations using the same data and over 50
   \end{minipage}
 \end{figure}
 
-This modified perceptron has all the quallitys needed to proceid with creating the boundary hunters, whats better is this also generalizes to the $\mathbb{R}^n$ case.
+This modified perceptron has all the quality needed to proceed with creating the boundary hunters, whats better is this also generalizes to the $\mathbb{R}^n$ case.
 
 \section{Boundary Hunter}
-Using the \textbf{Normal \& Point Paramaterisation} from before we construct boundary hunters, first we have a simple case where the area of intererest for each boundary hunter is simpley a circle with fixed radius, our goal is to make this area of interest an ellipse which the BH will learn.
+Using the \textbf{Normal \& Point Parameterization} from before we construct boundary hunters, first we have a simple case where the area of interest for each boundary hunter is simply a circle with fixed radius, our goal is to make this area of interest an ellipse which the BH will learn.
 
 \subsection{Loss Function Design: Attempt 1}
-We wish to convert our Perceptron into a Boundary Hunter so to begin we start with designing a suitible loss function. So firstly we want to have some notion of how responsible a boundary hunter is for a given data point, for now we will just denote the responsibility for data point n by $r_n$ and worry about calculating this later. Consider our boundary hunter as reducing the uncertuanty of the classes for each of the data points. As the datapoints get further away from our radius of expertees we become more uncertain about the class of the datapoint. So a reasonable loss function is 
+We wish to convert our Perceptron into a Boundary Hunter so to begin we start with designing a suitable loss function. So firstly we want to have some notion of how responsible a boundary hunter is for a given data point, for now we will just denote the responsibility for data point n by $r_n$ and worry about calculating this later. Consider our boundary hunter as reducing the uncertainty of the classes for each of the data points. As the data points get further away from our radius of expertises we become more uncertain about the class of the data point. So a reasonable loss function is 
 
 \begin{align}
 \frac{1}{n} \sum_{i=0}^n r_i(C_i log(y_i) + (1-C_i)log(1-y_i)) + (1-r_i) log(1/2)
@@ -121,26 +121,17 @@ How do we construct $r_i$. We would like the following property's of a responsib
 \item Responsibility for points outside the area of interest should decrease as distance from area increases.
 \end{enumerate}
 
-The folowing function seems like a good place to start. The responsibility for any point inside the area of interest is 1, and as the data points get further away the responsibility decreases
+The following function seems like a good place to start. The responsibility for any point inside the area of interest is 1, and as the data points get further away the responsibility decreases
 
 \begin{align}
 r_i = 1 - \frac{max(0, d-r)}{abs(d-r) + 0.1}
 \end{align}
 
-However we note that this functions isn't smooth, and that can cause problems when training with back prop, not to mention the hard boundary (i.e. responsibility 1 for all points inside area of interest) will also have a negative effect on the gradients. While its reasonable for us to want property (2) it seems unlikely we will find a sutible function meeting the condition. So we remove property (2) and add the condition that our function must be smooth. We now turn to the logistic function, Let $f = 1 - \frac{1}{1 + e^{-S(d - r)}}$, where S is the steepness of the sigmoid. We will want our responsibility function to have a low sensitivity at each extreme, i.e. a small change in distance when the point is either very close to or far from our center point should have a negligible impact on the responsibility. How ever we want our function to be very sensitive around the border of our area of interest. By a purely arbatary decision and from inspecting the graphs I chose to have a steepness of 10 thus giving us the following function
+However we note that this functions isn't smooth, and that can cause problems when training with back prop, not to mention the hard boundary (i.e. responsibility 1 for all points inside area of interest) will also have a negative effect on the gradients. While its reasonable for us to want property (2) it seems unlikely we will find a suitable function meeting the condition. So we remove property (2) and add the condition that our function must be smooth. We now turn to the logistic function, Let $f = 1 - \frac{1}{1 + e^{-S(d - r)}}$, where S is the steepness of the sigmoid. We will want our responsibility function to have a low sensitivity at each extreme, i.e. a small change in distance when the point is either very close to or far from our center point should have a negligible impact on the responsibility. How ever we want our function to be very sensitive around the border of our area of interest. By a purely arbatary decision and from inspecting the graphs I chose to have a steepness of 10 thus giving us the following function
 
 \begin{align}
 r_i = 1 - \frac{1}{1 + e^{-10(x-r)}}
 \end{align}
-
-\begin{figure}[H]
-\centering
-  \begin{minipage}[b]{0.4\textwidth}
-    \includegraphics[width=\textwidth]{Responsibility-Function.jpg}
-    \caption{Graph of responsibility function with r = 0.1, 0.3, 0.5, 0.7, 0.9}
-  \end{minipage}
-  \hfill
-\end{figure}
 
 While this does not meet our original criteria we see that for most points inside our area of interest the responsibility will be "close" to 1 and certainly above $\frac{1}{2}$, And if the area includes all the points then our loss will not reduce to the standard log loss but it will be close to it and as $r \to\infty$ we will converge to the standard log loss.
 
@@ -165,7 +156,7 @@ So consider our loss for a given data point with target $t$, prediction $y$ and 
 Essentially we want to reward our boundary hunter if it is an expert in a given region, so if it gets things wrong outside its area of interest thats good, and if it gets things correct outside its area of interest then thats bad.
 
 \subsection{Loss Function Design: Attempt 2}
-Based on our previous findings a more in depth consideration of a suitable loss function is required. Consider the folowing properties of our ideal loss function. The basic idea is that we want to become experts in a given region
+Based on our previous findings a more in depth consideration of a suitable loss function is required. Consider the following properties of our ideal loss function. The basic idea is that we want to become experts in a given region
 \begin{enumerate}
 \item As a data point gets further away from our area of interest we "care less" about our accuracy for classifying that point.
 \item Increasing area of interest should decrease the loss iff increasing the area of interest allows us to classify more points correctly.
@@ -212,16 +203,16 @@ We take a step back and consider the basics of what we are trying to achieve. Fi
 &= \sum R^{'} (r) * CE
 \end{align*} 
 
-Namely the quantity $\frac{\partial L}{\partial r}$ dosnt actually tell us how changing the radius changes the error it simplys tells us which direction to move the radius to increase the responsibility. This results in the radius constantly increasing.\\
+Namely the quantity $\frac{\partial L}{\partial r}$ doesn't actually tell us how changing the radius changes the error it simply tells us which direction to move the radius to increase the responsibility. This results in the radius constantly increasing.\\
 
 \subsection{Loss Function Design: Attempt 3}
-Based on what we just observed we need a new approach. We consider our boundary hunter as a sales man, who gets paid $\$B$ for selling something to someone who wants it (if the sales man is responsible for this individual) and gets penalized $\$C$ dollars for selling something to someone who dosnt want it. Using this model, the sales man's is to position them selves and adjust there responsibility so that they are maximizing there profit. Now we simply must quantify this. We know $y^t(1-y)^{t-1}$ is the probability we get something right (probability we are selling to someone who wants what we are selling). We arrive at the flowing quantity.
+Based on what we just observed we need a new approach. We consider our boundary hunter as a sales man, who gets paid $\$B$ for selling something to someone who wants it (if the sales man is responsible for this individual) and gets penalized $\$C$ dollars for selling something to someone who doesn't want it. Using this model, the sales man's is to position them selves and adjust there responsibility so that they are maximizing there profit. Now we simply must quantify this. We know $y^t(1-y)^{t-1}$ is the probability we get something right (probability we are selling to someone who wants what we are selling). We arrive at the flowing quantity.
 
 \begin{align}
-L = \sum_{i=0} r_i * \big[ By_i^{t_i}(1-y_i)^{1-t_i} - Cy_i^{1-t_i}(1-y_i)^{t_i} \big] 
+L = \sum_{i=0} r_i * \big[Cy_i^{1-t_i}(1-y_i)^{t_i} - By_i^{t_i}(1-y_i)^{1-t_i} \big] 
 \end{align}
 
-While initially it seemed like this would suffer from the same problem described in the previous observation it does not. Consider the differential we know that $R^{'}(r)$ will always have the same sign but $By_i^{t_i}(1-y_i)^{1-t_i} - Cy_i^{1-t_i}(1-y_i)^{t_i}$ can be both positive and negative, so we end up in the situation where if we are losing more money that we are gaining then we will decreases our radius but if we are gaining more money than we are losing we will increase our radius
+While initially it seemed like this would suffer from the same problem described in the previous observation it does not. Consider the differential we know that $R^{'}(r)$ will always have the same sign but $Cy_i^{1-t_i}(1-y_i)^{t_i} - By_i^{t_i}(1-y_i)^{1-t_i} $ can be both positive and negative, so we end up in the situation where if we are losing more money that we are gaining then we will decreases our radius but if we are gaining more money than we are losing we will increase our radius
 
 \subsubsection{Experimental Results}
 
@@ -230,71 +221,99 @@ With the same parameters as before we train a perception with this loss and find
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
-    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-R2.png}
-    \caption{Boundary Hunter with (?) as loss and (3) as responsibility}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-01.png}
+    \caption{Boundary Hunter with (5) as loss and (3) as responsibility}
   \end{minipage}
   \hfill
 \end{figure}
 
-\subsubsection{Loss Investigation}
-To get a better idea of performance we will execute a boundary hunter with this loss over various random initial conditions to get a feel for how it works, the results are somewhat disappointing however
+Not quite the results we where looking for but this outcome makes sense as there is a disproportionate amount of points. Increasing the parameter C will allow us to tune our boundary hunter to care more about getting things incorrect. To get a good spread we use C = 2, 2.5, 3
 
 \begin{figure}[H]
-\centering
-  \subfloat[]{\includegraphics[width=0.3\textwidth]{BoundaryHunter-Attempt3-R0.png}}
-  \hfill
-  \subfloat[]{\includegraphics[width=0.3\textwidth]{BoundaryHunter-Attempt3-R1.png}}
-\hfill
-\subfloat[]{\includegraphics[width=0.3\textwidth]{BoundaryHunter-Attempt3-R2.png}}
-\end{figure}
-
-This approach definitely seems to favor moving off to the side of the data. While (c) seems like a reasonable solution and actually contains some points in its area of interest
-
-\subsubsection{Justification For Results}
-Using the responsibility to scale the loss in this way encourages the boundary hunter to "run away" from the data because anything outside its area of interest will have a significantly lower responsibility than anything inside, So even by getting everything right inside our area we can achieve a better loss by moving away from the data and things we might be getting wrong outside our area.
-
-\subsubsection{Reflection}
-While we need to use the responsibility in some regard, using it directly in the loss function does not provide the results we are looking for.
-
-
-\subsection{Loss Function Design: Attempt 4}
-Continuing with the same analgey as before (the sales man trying to maximize there profit). Except now we only sell to people inside our area of interest and anyone outside we don't care about. This will solve the problem of boundary hunter "escaping" the data. If we are earning lots of money from selling inside our area then we wish to expand the region we are selling to and then if we are loosing lots of money we want to reduce the region we are selling to. This corresponds to the same loss as Attempt 3 however now we are restricting our loss to only care about points inside our area. This way we are optimizing our hyperplane only for the points we care about.
-
-However we have to define the gradient of the radius as it no longer exists, we set it to be $\frac{\partial L}{\partial r} = sgn(loss)$  so we get -1 if the loss is negative, 0 if the loss is, and 1 if the loss is positive
-
-\subsubsection{Experimental Results}
-In our example data there are many more of one class than the other and using this method rewards the boundary hunter for just classifying everything as the one class and including everything inside our range.
-
-\begin{figure}[H]
-\centering
-  \begin{minipage}[b]{0.4\textwidth}
-    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt4-01.png}
-    \caption{Boundary Hunter with (?) as loss and (3) as responsibility}
+  \centering
+  \begin{minipage}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-02.png}
+    \caption{C = 1.3}
   \end{minipage}
   \hfill
+  \begin{minipage}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-03.png}
+    \caption{C = 1.6}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-04.png}
+    \caption{C = 1.9}
+  \end{minipage}
 \end{figure}
 
-However our loss gives us a knob which we can turn, changing how much we care about getting things wrong or getting them right, we can adjust this knob so that we hate getting things wrong more. We set our cost multiplier to be $1 + (\frac{65}{100})$, and profit multiple to  $1 + (\frac{35}{100})$. The aim of this is to balance out the proportions of points.
+How ever this only seems to change the positioning of the hyperplane and not the radius of our area of interest. If we impose some reasonable restrictions on the radius (i.e. $0.3 \leq r \leq 0.8$), set our C = 2 and adjust the responsibility function to be less steep then we can achieve some results which seem interesting
 
 \begin{figure}[H]
-\centering
+  \centering
   \begin{minipage}[b]{0.4\textwidth}
-    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt4-02.png}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-R0.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-R1.png}
     \caption{}
   \end{minipage}
   \hfill
 \end{figure}
-While this looks like exactly what we want, this is just a coincidence! Now we encounter an issue with the loss reaching 0 and then staying there, essentially bringing training to a halt, to fix this we count a loss of 0 as making us want to increase our region. While this does get things moving the boundary hunters like to keep there regions small. Experimenting with this implementation, starting with random initial conditions will allow us to get a better feel for whether this is working or not.
+
+However more often than not we get results like following uninteresting ones
 
 \begin{figure}[H]
-\centering
-  \subfloat[]{\includegraphics[width=0.4\textwidth]{BoundaryHunter-Attempt4-03.png}}
+  \centering
+  \begin{minipage}[b]{0.5\textwidth}
+    \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-R2.png}
+    \caption{}
+  \end{minipage}
   \hfill
-  \subfloat[]{\includegraphics[width=0.4\textwidth]{BoundaryHunter-Attempt4-04.png}}
 \end{figure}
 
-While these results still seem interesting and the approach seems promising but radius's are to small to produce any meaningful results. How can we improve this loss to consider larger regions.
+The issue appears to be that of local optima, the solutions looking like what we want (Figure 13 and 14) certainly have lower error the boundary hunter appears to have trouble escaping local optima to find these solutions.
 
+To confirm this we look to plot the landscape of the loss function. To do this we will fix the radius and and the hyperplane position while varying the x and y position of the point, The parameters we fix for hyperplane are what we would want if trying to place our self on the left side of the chevron . Using the parameters as above, (steepness of 5, C = 2) We get the following plots.
 
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{LossPlot-1.png}
+    \caption{Radius as 0.3}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{LossPlot-2.png}
+    \caption{Radius as 0.8}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{LossPlot-3.png}
+    \caption{Radius as 2.0}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+As clearly demonstrated by these graphs this loss function is not condusive to finding the optimal solution we are expecting.  There is a noticeable deformation in the contour where our expected solution is however it is unlikely that it will be found by the boundary hunter, more often than not we will end up on the outside of the data. For points outside our area of interest the responsibility rapidly approaches 0, this is what would cause the edge of the data to be an optimal solution. While this would indicate a responsibility function which is to steep, adjusting this has little effect.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{LossPlot-4.png}
+    \caption{Radius as 0.3, with steppness as 0.5}
+  \end{minipage}
+  \hfill
+\end{figure}
 
 \end{document}

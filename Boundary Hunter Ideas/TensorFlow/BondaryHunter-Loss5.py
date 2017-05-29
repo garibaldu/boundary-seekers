@@ -46,7 +46,7 @@ weights = tf.Variable(np.random.rand(4), 'weights')
 #weights = tf.Variable(np.array([-1.0, 1.0, 0.0, -0.0]), 'weights', dtype='float64')
 radius = tf.Variable(0.5, 'radius', dtype='float64')
 normal = [weights[0], weights[1]]
-point = [weights[2], weights[3]]
+normal2 = [weights[2], weights[3]]
 
 # Set up inputs/outputs to the network
 inputs = tf.placeholder('float64', [None, 2], name='inputs')

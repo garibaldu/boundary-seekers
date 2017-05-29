@@ -65,12 +65,46 @@ def generate_split_data():
         
     return np.array(points), np.array(targets)
 
+
+def generate_clumps():
+    xBounds = [-50, 50]
+    yBounds = [-50, 50]
+    totalPoints = 100
+    
+    points = []
+    targets = []
+    
+    for i in range(0, int(totalPoints/2.0)):
+        x = random.randint(xBounds[0], 0)
+        y = random.randint(yBounds[0], 0)
+
+        if -x - 30 < y:
+            points.append([x/50.0,y/50.0])
+            targets.append(1.0)
+        else:
+            points.append([x/50.0,y/50.0])
+            targets.append(0.0)
+
+    for i in range(0, int(totalPoints/2.0)):
+        x = random.randint(0, xBounds[1])
+        y = random.randint(0, yBounds[1])
+        
+        if -x + 30 > y:
+            points.append([x/50.0,y/50.0])
+            targets.append(1.0)
+        else:
+            points.append([x/50.0,y/50.0])
+            targets.append(0.0)
+        
+    return np.array(points), np.array(targets)    
+
+
 def init_network(inputs, layers):
     network = []
     
     current_in = inputs
     for l in layers:
-        layer = tf.Variable(0.02 * (-0.5 + np.random.rand(l, current_in + 1)), dtype='float64')
+        layer = tf.Variable((-0.5 + np.random.rand(l, current_in + 1)), dtype='float64')
         current_in = l
 
         network.append(layer)
@@ -81,8 +115,8 @@ def init_network(inputs, layers):
 def apply_network(network, inputs):
     current_out = inputs
     for layer in network:
+        current_out = tf.concat([tf.expand_dims(np.repeat([1.0], current_out.shape[0]), 1), current_out], axis=1)
         current_out = sigmoid(tf.matmul(current_out, tf.transpose(layer)))
-        return current_out
 
     return current_out
 
@@ -91,6 +125,7 @@ def create_bh(inputs, out):
     return tf.Variable(-0.5 + np.random.rand(out, inputs + 1), dtype='float64')
 
 def apply_bh(network, inputs):
+    inputs = tf.concat([tf.expand_dims(np.repeat([1.0], inputs.shape[0]), 1), inputs], axis=1)
     return sigmoid(tf.matmul(inputs, tf.transpose(network)))
 
 def sigmoid(tensor):
@@ -98,7 +133,7 @@ def sigmoid(tensor):
 
 # Set up the data
 random.seed(1234)
-points, out = generate_split_data()#generateChevronData()
+points, out = generate_clumps()#generate_split_data()#generateChevronData()
 
 num_bh = 2
 
@@ -107,7 +142,7 @@ one = tf.constant([1.0], dtype='float64')
 inpt = tf.placeholder('float64', [2], name='inpt')
 target = tf.placeholder('float64', name='target')
 
-inpt_prime = tf.transpose(tf.expand_dims(tf.concat([one, inpt], axis=0), 1))
+inpt_prime = tf.transpose(tf.expand_dims(inpt, 1))
 
 # Create boundary hunters
 boundary_hunters = [create_bh(2, 1) for i in range(num_bh)]
@@ -115,42 +150,48 @@ boundary_hunters = [create_bh(2, 1) for i in range(num_bh)]
 # Create gating network
 gating_network = init_network(2, [3, num_bh])
 
-boundary_hunter_outs = [apply_bh(net, inpt_prime)[0] for net in boundary_hunters]
-gate_out = apply_network(gating_network, inpt_prime)
+boundary_hunter_outs = [apply_bh(net, inpt_prime)[0][0] for net in boundary_hunters]
+gate_out = apply_network(gating_network, inpt_prime)[0]
 norm_gate_out = tf.nn.softmax(gate_out)
 
 dif = lambda x: tf.pow(tf.subtract(target, x), 2.0)
 o = tf.convert_to_tensor(boundary_hunter_outs, dtype=tf.float64)
-square_diff = tf.map_fn(dif, tf.convert_to_tensor(boundary_hunter_outs, dtype=tf.float64))
+square_diff = tf.map_fn(dif, o)
 
-#errors = tf.transpose(tf.exp((-1.0/2.0) * square_diff))
-#error = -tf.log(tf.reduce_sum(tf.multiply(gate_out, errors)))
-errors = tf.multiply(gate_out, square_diff)
-error = tf.reduce_sum(errors)
+errors = tf.exp((-1.0/2.0) * square_diff)
+error = -tf.log(tf.reduce_sum(tf.multiply(norm_gate_out, errors)))
+#errors = tf.multiply(norm_gate_out, square_diff)
+#error = tf.reduce_sum(errors)
 
-train_op = tf.train.GradientDescentOptimizer(0.01).minimize(error)
+train_op = tf.train.GradientDescentOptimizer(0.001).minimize(error)
 
 model = tf.global_variables_initializer()
 
 with tf.Session() as session:
     session.run(model)
 
+    #print(session.run(norm_gate_out, feed_dict={inpt: points[0], target: out[0]}))
     #print(session.run(boundary_hunter_outs, feed_dict={inpt: points[0], target: out[0]}))
     #print(session.run(o, feed_dict={inpt: points[0], target: out[0]}))
+    #print(session.run(target, feed_dict={inpt: points[0], target: out[0]}))
     #print(session.run(square_diff, feed_dict={inpt: points[0], target: out[0]}))
+    #print(session.run(errors, feed_dict={inpt: points[0], target: out[0]}))
     #print(session.run(error, feed_dict={inpt: points[0], target: out[0]}))
-    
-    #print(session.run(norm_gate_out, feed_dict={inpt: points[0], target: out[0]}))
-    #print(session.run(error, feed_dict={inpt: points[0], target: out[0]}))
+##    print()
+##    session.run(train_op, feed_dict={inpt: points[0], target: out[0]})
+##    print(session.run(norm_gate_out, feed_dict={inpt: points[0], target: out[0]}))
+##    print(session.run(errors, feed_dict={inpt: points[0], target: out[0]}))
+##    print(session.run(error, feed_dict={inpt: points[0], target: out[0]}))
     #print()
-    #for i in range(100):
+    #for i in range(1000):
     #    session.run(train_op, feed_dict={inpt: points[0], target: out[0]})
     #print(session.run(norm_gate_out, feed_dict={inpt: points[0], target: out[0]}))
     #print(session.run(error, feed_dict={inpt: points[0], target: out[0]}))
 
     err = 0
     for d in range(len(points)):
-            err += session.run(error, feed_dict={inpt: points[d], target: out[d]})
+        print(session.run(norm_gate_out, feed_dict={inpt: points[d], target: out[d]}))
+        err += session.run(error, feed_dict={inpt: points[d], target: out[d]})
 
     print(err)
 
@@ -160,7 +201,8 @@ with tf.Session() as session:
 
     err = 0
     for d in range(len(points)):
-            err += session.run(error, feed_dict={inpt: points[d], target: out[d]})
+        print(session.run(norm_gate_out, feed_dict={inpt: points[d], target: out[d]}))
+        err += session.run(error, feed_dict={inpt: points[d], target: out[d]})
 
     print(err)
 

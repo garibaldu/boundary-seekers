@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import random
 import math
 
+np.random.seed(1234)
+random.seed(1234)
+
 plt.switch_backend("TkAgg")
 
 def plotScatter(points, color):
@@ -14,11 +17,11 @@ def plotScatter(points, color):
     plt.scatter(xs, ys, c=color)
 
 
-def plot_weights(weights):
+def plot_weights(weights, color):
     byas = -1 * weights[0]/weights[2]
     Xcoef = -1 * weights[1]/weights[2]
 
-    plt.plot([-1.0, 1.0], [-1*Xcoef + byas, Xcoef + byas], 'k-')
+    plt.plot([-1.0, 1.0], [-1*Xcoef + byas, Xcoef + byas], '{}-'.format(color))
 
     print("B: " + str(byas))
     print("XCoef: " + str(Xcoef))
@@ -122,7 +125,7 @@ def apply_network(network, inputs):
 
 
 def create_bh(inputs, out):
-    return tf.Variable(-0.5 + np.random.rand(out, inputs + 1), dtype='float64')
+    return tf.Variable(np.random.rand(out, inputs + 1), dtype='float64')
 
 def apply_bh(network, inputs):
     inputs = tf.concat([tf.expand_dims(np.repeat([1.0], inputs.shape[0]), 1), inputs], axis=1)
@@ -148,7 +151,7 @@ inpt_prime = tf.transpose(tf.expand_dims(inpt, 1))
 boundary_hunters = [create_bh(2, 1) for i in range(num_bh)]
 
 # Create gating network
-gating_network = init_network(2, [3, num_bh])
+gating_network = init_network(2, [num_bh])
 
 boundary_hunter_outs = [apply_bh(net, inpt_prime)[0][0] for net in boundary_hunters]
 gate_out = apply_network(gating_network, inpt_prime)[0]
@@ -163,7 +166,8 @@ error = -tf.log(tf.reduce_sum(tf.multiply(norm_gate_out, errors)))
 #errors = tf.multiply(norm_gate_out, square_diff)
 #error = tf.reduce_sum(errors)
 
-train_op = tf.train.GradientDescentOptimizer(0.001).minimize(error)
+train_op_gate = tf.train.GradientDescentOptimizer(0.1).minimize(error, var_list=gating_network)
+train_op_hunters = tf.train.GradientDescentOptimizer(0.0001).minimize(error, var_list=boundary_hunters)
 
 model = tf.global_variables_initializer()
 
@@ -195,9 +199,16 @@ with tf.Session() as session:
 
     print(err)
 
-    for e in range(1000):
+    for e in range(100):
         for d in range(len(points)):
-            session.run(train_op, feed_dict={inpt: points[d], target: out[d]})
+            session.run(train_op_gate, feed_dict={inpt: points[d], target: out[d]})
+            session.run(train_op_hunters, feed_dict={inpt: points[d], target: out[d]})
+
+        if e % 1000 == 0:
+            err = 0
+            for d in range(len(points)):
+                err += session.run(error, feed_dict={inpt: points[d], target: out[d]})
+            print(err)
 
     err = 0
     for d in range(len(points)):
@@ -207,8 +218,7 @@ with tf.Session() as session:
     print(err)
 
     final_hunters = session.run(boundary_hunters)
-    print(final_hunters)
-
+    final_gate = session.run(gating_network)
 
 
 
@@ -232,7 +242,9 @@ plotScatter(c2, 'b')
 for bh in final_hunters:
     net = bh[0]
     print(net)
-    plot_weights(net)
+    plot_weights(net, 'k')
+
+#plot_weights(final_gate, 'g')
 
 plt.gca().set_aspect('equal')
 

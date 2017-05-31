@@ -16,6 +16,21 @@ def plotScatter(points, color):
     
     plt.scatter(xs, ys, c=color)
 
+def plot_weights(weights, center, color):
+    plot_centroid(center)
+
+    n = np.array([weights[0] * center[0] + weights[1] * center[1], 
+              -weights[0], 
+              -weights[1]])
+
+    byas = -1 * n[0]/n[2]
+    Xcoef = -1 * n[1]/n[2]
+
+    plt.plot([-1.0, 1.0], [-1*Xcoef + byas, Xcoef + byas], '{}-'.format(color))
+
+    print("B: " + str(byas))
+    print("XCoef: " + str(Xcoef))
+
 def plot_centroid(centroid):
     plt.plot(centroid[0], centroid[1], markersize=10, marker='x', color='g', mew=5)
 
@@ -97,23 +112,35 @@ def generate_clumps():
         
     return np.array(points), np.array(targets)   
 
-points, out = generate_clumps()
+def sigmoid(phi):
+    return 1.0/(1.0 + tf.exp(-phi))
+
+points, out = generateChevronData()
 in_size = 2
-num_centroids = 8
+out_size = 1
+num_centroids = 2
 num_outputs = 1
 
-inputs = tf.placeholder('float64', [None])
-targets = tf.placeholder('float64', [None])
+inputs = tf.placeholder('float64', [in_size])
+targets = tf.placeholder('float64', [out_size])
 
 centroids = tf.Variable(np.random.uniform(low=-1.0, high=1.0, size=(num_centroids, in_size)))
 betas = tf.Variable(np.repeat(1.0, num_centroids))
+hidden_weights = tf.Variable(np.random.uniform(low=-0.5, high=0.5, size=(num_centroids, in_size)))
 output_weights = tf.Variable(np.random.uniform(low=-0.5, high=0.5, size=(num_outputs, num_centroids + 1)))
 
-square_diff = lambda c: tf.reduce_sum(tf.pow(tf.subtract(inputs, c), 2.0))
-hidden_out = tf.exp(-1.0 * tf.multiply(betas, tf.map_fn(square_diff, centroids)))
-hidden_out_prime = tf.transpose(tf.expand_dims(tf.concat([[1.0], hidden_out], 0), 1))
+input_by_plane = lambda x: tf.subtract(inputs, x)
+transformed_by_points = tf.map_fn(input_by_plane, centroids)
 
-output = tf.matmul(hidden_out_prime, tf.transpose(output_weights))
+# Peform Computation
+prob = tf.reduce_sum(tf.multiply(transformed_by_points, hidden_weights), 1)
+
+square_diff = lambda c: tf.reduce_sum(tf.pow(tf.subtract(inputs, c), 2.0))
+g = tf.exp(-1.0 * tf.multiply(betas, tf.map_fn(square_diff, centroids)))
+hidden_out = 0.5 * (1 - g) + tf.multiply(g, prob)
+hidden_out_prime = tf.concat([[1.0], hidden_out], 0)
+
+output = sigmoid(tf.matmul(tf.transpose(tf.expand_dims(hidden_out_prime, 1)), tf.transpose(output_weights)))
 errors = tf.pow(tf.subtract(tf.expand_dims(targets, 1), output), 2.0)
 error = tf.reduce_sum(errors)
 
@@ -123,14 +150,8 @@ model = tf.global_variables_initializer()
 
 with tf.Session() as session:
     session.run(model)
-
-    err = 0
-    for d in range(len(points)):
-        err += session.run(error, feed_dict={inputs: points[d], targets: [out[d]]})
-
-    print(err)
-
-    for e in range(300):
+    
+    for e in range(1500):
         for d in range(len(points)):
             session.run(train_op, feed_dict={inputs: points[d], targets: [out[d]]})
 
@@ -140,19 +161,15 @@ with tf.Session() as session:
                 err += session.run(error, feed_dict={inputs: points[d], targets: [out[d]]})
             print(err)
 
-    err = 0
     incorrect = []
     for d in range(len(points)):
         o = session.run(output, feed_dict={inputs: points[d], targets: [out[d]]})
         if not int(round(o[0,0])) == out[d]:
             incorrect.append(points[d])
-            print(int(round(o[0,0])), out[d])
-        err += session.run(error, feed_dict={inputs: points[d], targets: [out[d]]})
-
-    print(err)
 
     centroids = session.run(centroids)
     betas = session.run(betas)
+    boundarys = session.run(hidden_weights)
 
 
 # Plot points on graph
@@ -176,11 +193,19 @@ plotScatter(c2, 'b')
 for centroid in centroids:
     plot_centroid(centroid)
 
+for i in range(len(boundarys)):
+    plot_weights(boundarys[i], centroids[i], 'g')
+
+#for plane in boundarys:
+#    plot_weights(boundarys, 'g')
+
 for point in incorrect:
     plot_incorrect(point)
 
 #plot_weights(final_gate, 'g')
 
 plt.gca().set_aspect('equal')
+plt.xlim(xmin=-1.5, xmax=1.5)
+plt.ylim(ymin=-1.5, ymax=1.5)
 
 plt.show()

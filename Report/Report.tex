@@ -11,6 +11,9 @@
 
 \newtheorem{theorem}{Theorem}
 
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
 \title{%
 	Machine Learning: Collectives of local decision makers\\
 	\large Construction Of A Boundary Hunter
@@ -316,7 +319,98 @@ As clearly demonstrated by these graphs this loss function is not condusive to f
   \hfill
 \end{figure}
 
-\section{Boundary Hunter with Two Hyperplanes}
-We now consider a seperate approach, where insted of learning a hyperplane with an area of interest, we will learn two hyper planes, one is our decision boundary and the other is our boundary seperating the points we care about from thoughs we dont
+\newpage
+
+\section{Radial Basis Function Networks}
+\subsection{Definition}
+We turn our attention to a class of networks which seem very closely related to what we want, these are Radial Basis Functon Networks (RBF Networks). Before we can talk about RBF Networks we will first define what an RBF is.\\
+
+A \textbf{radial basis function} is a function in which the output depends only on the distance from some point we call the center of the RBF. $f(x, c) = f(\lVert x - c \lVert)$.\\
+
+And then we can define an RBF Neuron as being a neuron with an activation stasfying the propertes of a radial basis function. Esentially each RBF Neuron is mesuring the similarity between its center and the input vector presented to it, the closer the input is to the center the closer the activation is to 1. Any RBF will do as an activation but we will be using one based on a the 1D Gaussian distrubution. The equation for a 1D Gussian is 
+
+\begin{align*}
+f(x) = \frac{1}{\sigma \sqrt{2 \pi}} e^{-\frac{(x-\mu)^2}{2\sigma^2}}
+\end{align*}
+
+We can make some simplifications seing as we arnt interested in the standard deviation, making our activation
+
+\begin{align}
+a(x) = e^{-\beta \lVert x - c \lVert}
+\end{align}
+
+We use the $\beta$ term to controll how quickly the activation decays.\\
+
+An intuative view of an RBF network is we have a number of RBF Neurons which tells the output layer how close the input vector is to its center, the output neurons then use this information to make a decision about there activation by taking a weighted sum of the activations of the hidden neurons.
+
+\subsection{Training RBF Networks}
+We start with the simplist method for training an RBF Network. Simply randomly initilize all the paramaters of the network and then use gradient descent to find better paramaters. Using this method we are able to achieve good classifiers for data that a standard perceptron would have no hope at doing anything interesting. 
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{RBFN-01.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+  \centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{RBFN-02.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+  \centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{RBFN-03.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+
+The green x's represent our centroids while the red x's represent the points we are getting incorrect
+\end{figure}
+
+\newpage
+
+\section{RBF Boundary Hunters}
+Based on these RBF Networks, is it possible to use the ideas that we had previously to construct a boundary hunter. We create the concept of a RBF Boundary Hunter Neuron and derive an activation function for such a neuron.\\
+
+Consider that the output of a regular RBF Neuron is the unsertianty about wether the given point is within its radius, as the point gets further away we become less certian about our ownership and so the activation of the RBF Neuron decreases. We would like to incorpreate this into the output of our RBF Boundary Hunter as as the points move further away from the center then we become less sure about our classification. Let $f$ be our activation function, as our beleif that the point is in class 1 increases $f \rightarrow 1$ and as it decreases we have $f \rightarrow 0$, so if $f = \frac{1}{2}$ then we are unsure about the class of the point. It seemes logical for $f \rightarrow \frac{1}{2}$ as the distance between the center of a boundary hunter and a point increases. Now we can define our RFB Boundary Hunter Neuron for binary classification.\\
+
+\theoremstyle{definition}
+\begin{definition}
+A \textbf{RBF Boundary Hunter Neuron} (for binary classification) in $\mathbb{R}^n$ has $2n + 1$ free paramaters. $\beta \in \mathbb{R}$, $\mathbf{c} \in \mathbb{R}^n$ and $\mathbf{n} \in \mathbb{R}^n$. $\beta, \mathbf{c}$ represent decay speed and center of the RBF portion of our neuron. $\mathbf{n}$ defines a hyperplane which passes through our point $\mathbf{c}$. We define the activation as folows
+
+\begin{align}
+a(x) &= \frac{1}{2} + e^{-\beta \lVert x - c \lVert}(\frac{1}{1 + e^{-(\mathbf{n} \cdot (\mathbf{c} - x))}} - \frac{1}{2})
+\end{align}
+\end{definition}
+
+\subsection{Training RBF Boundary Hunters}
+Using the same method as before, randomly initializing all paramaters and then training using gradient descent.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{RBFN-BH-01.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+  \centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{RBFN-BH-02.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+  \centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{RBFN-BH-03.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+
+The green x's represent our centroids while the red x's represent the points we are getting incorrect
+\end{figure}
+
+These resuts show very promising and consistant results. The hyperplanes being placed ezactly where we would hope, however some results are a little misterious to understand.
 
 \end{document}

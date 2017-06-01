@@ -381,12 +381,13 @@ Consider that the output of a regular RBF Neuron is the unsertianty about wether
 A \textbf{RBF Boundary Hunter Neuron} (for binary classification) in $\mathbb{R}^n$ has $2n + 1$ free paramaters. $\beta \in \mathbb{R}$, $\mathbf{c} \in \mathbb{R}^n$ and $\mathbf{n} \in \mathbb{R}^n$. $\beta, \mathbf{c}$ represent decay speed and center of the RBF portion of our neuron. $\mathbf{n}$ defines a hyperplane which passes through our point $\mathbf{c}$. We define the activation as folows
 
 \begin{align}
-a(x) &= \frac{1}{2} + e^{-\beta \lVert x - c \lVert}(\frac{1}{1 + e^{-(\mathbf{n} \cdot (\mathbf{c} - x))}} - \frac{1}{2})
+a(x) &= \frac{1}{2} + e^{-\beta \lVert x - c \lVert^2}(\frac{1}{1 + e^{-(\mathbf{n} \cdot (\mathbf{c} - x))}} - \frac{1}{2})
 \end{align}
+
 \end{definition}
 
 \subsection{Training RBF Boundary Hunters}
-Using the same method as before, randomly initializing all paramaters and then training using gradient descent.
+Using the same method as before, randomly initializing all paramaters and then training using gradient descent. Allthough we must clip our betas to be positive, undesirible but necessary, if we dont clip them then the value outputted by the gate explodes.
 
 \begin{figure}[H]
   \centering
@@ -411,6 +412,50 @@ Using the same method as before, randomly initializing all paramaters and then t
 The green x's represent our centroids while the red x's represent the points we are getting incorrect
 \end{figure}
 
-These resuts show very promising and consistant results. The hyperplanes being placed ezactly where we would hope, however some results are a little misterious to understand.
+These resuts show very promising and consistant results. The hyperplanes being placed ezactly where we would hope, however some results are a little misterious to understand. Returning to our motivation for this project, what happens if we train the chevron dataset with 1 RBF Boundary Hunter neuron?
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{RBFN-BH-04.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+Unfourtunalty while its alot closer than anything before still not quite the result we are looking for.
+
+\newpage
+
+\section{Gated Neurons}
+We now wish to move away from the idea of RFB Neurons and generalize our concept of a RBF Boundary Hunter Neuron to what we will call a \textbf{Gated Neuron}. This will allow us to define different methods for gating our neurons
+
+\theoremstyle{definition}
+\begin{definition}
+A \textbf{Gated Neuron} consists of a point $c$, a \textbf{gating function} $g$ and $n$, a normal vector to the decision boundary. The function $g$ takes the input to the neuron and outputs our certianty about our classification for that point, if $g$ is 0 then we are completly unsure about the input and if $g$ is 1 then we are certian.
+
+\begin{align}
+a(x) &= \frac{1}{2} + g(x) (\sigma(\mathbf{n} \cdot (\mathbf{c} - x)) - \frac{1}{2})
+\end{align}
+
+\end{definition}
+
+\section{Hyperplane Gated Neuron}
+We wish now to try use a second hyperplane as our gating. So our gated neuron now has another normal vector, $\mathbf{m}$, which defines a hyperplane seperating the points we are certian about from the ones we are uncertian about. This makes our gating function $g = \sigma(\mathbf{m} \cdot (\mathbf{c} - x))$\\
+
+Which then when trainied on our chevron data gives the folowing result
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.4\textwidth}
+    \includegraphics[width=\textwidth]{GN-MH-01.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+
+The red line represents the gating hyperplane and the green line represents the decision boundary
+\end{figure}
+
+This is precisely what we are looking for interms of classification of a chevron with a single boundary hunter.
 
 \end{document}

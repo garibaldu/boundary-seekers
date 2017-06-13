@@ -1,5 +1,7 @@
-\documentclass{article}
+\documentclass[notitlepage]{report}
 
+\usepackage{titling}
+\usepackage{blindtext}
 \usepackage{amsmath}
 \usepackage{amsthm}
 \usepackage{amssymb}
@@ -15,78 +17,77 @@
 \newtheorem{definition}{Definition}[section]
 
 \title{%
-	Machine Learning: Collectives of local decision makers\\
+	Collectives of local decision makers\\
 	\large Construction Of A Boundary Hunter
 }
-\author{Daniel Braithwaite}
+\author{Daniel Braithwaite\\[1cm] {Supervisor: Marcus Frean}}
 
 \begin{document}
 
-\maketitle
+\begin{titlingpage}
+    \maketitle
+    \begin{abstract}
+    Adaptive Mixtures of Local Experts \cite{jacobs1991adaptive}, presents a system which has a number of sub networks each tasked with learning a subset of the whole training data. We wish to extend this idea by making each expert network responsible for deciding what it is interested in, we call such expert networks boundary hunters. Our initial approach to a design boundary hunter was to create a loss function which promoted the learning of local features, solving this problem equates to a careful balancing of the rewards and penalties, after multiple attempts in which the boundary hunter either learnt to care about every data point or none of them we concluded that a different approach was needed. Consequently we shifted our attention to networks of boundary hunters based of Radial Basis Function (RBF) Networks, where the hidden layer of the network consisted of boundary hunters instead of RBF Neurons, this approach worked on our toy problems. Following this success we discovered that using this network structure actually reintroduced dependency between the hidden neurons, what we where trying to avoid, so we attempted to train a single boundary hunter neuron by its self which after some modifications we found to work as we had hoped for. Testing both our individual and networks of boundary hunters on the Sonar benchmark problem showed that while the ideas developed in this report are effective on small contrived examples we have yet to develop something which is able to compete with today's cutting edge neural networks.
+    \end{abstract}
+\end{titlingpage}
 
-The goal of this project is to create neurons which instead of searching for a global minimum they will choose a specific part of the data to place their hyperplane. Consider the following situation in $\mathbb{R}^2$ where we have data split into two classes and the second class is boxed into a chevron shape. A single perceptron will go and place a horizontal line through the plane however this isn't telling us anything interesting. Perhaps something better to do is to align its self to one of the sides of the chevron, then if we added another "boundary hunter" it could align its self to the other side of the chevron.
+\chapter{Introduction}
 
-\section{Simplified Situation}
-Before worrying about this in the general case we aim to get a better understanding of the problem by first trying to solve the case described above. We first make some changes to how we have parameterized our perceptron. We want to find a way which performs the same as a standard perceptron before we start making it into a boundary hunter
+In the paper Adaptive Mixtures of Local Experts \cite{jacobs1991adaptive} an idea was proposed to create systems where one has a number of expert networks, each responsible for only a subset of the data. While training our system we want to be able to learn which expert is responsible for which data points, this is where a gating network comes in, it is trained along side our expert networks and decides who is responsible for each data point. The idea being that if our problem consists of a training set which can be naturally divided up into distinct sub problems, then using these networks will provide better performance, by approximating all of these functions separately and interpolating between them, rather than assuming the data is governed by one function and trying to learning something that does not naturally exist.\\
 
-\subsection{Point \& Gradient Paramaterisation}
-We are trying to optimize a point (x,y) and a gradient. This is an alternative way to paramaterise our line. We are using sum squared error for our loss function and sigmoid as our activation. Each "boundary hunter" (BH) has the following weights vector $W = [m, x_0, y_0]$ and we consider two inputs to our BH, x and y. Our perceptron computes $z = (y - y_0) - m(x - x_0)$ and then outputs $o = f(z) = \frac{1}{1+e^{-z}}$.
+During training if an expert has a low responsibility for some data it is allowed to slack off and get it wrong, this means that another expert has a high responsibility for that data and must be doing its best to classify it correctly. So the expert networks are not completely independent as each one relies on the others to pick up the slack for what it gets wrong.\\
 
-\subsubsection{Comparison To Perceptron}
-If we use the same set of data to train both our standard perceptron and our modified perceptron we see that our modified doesn't quite perform as well as the standard version. For both models below they where trained for 50000 iterations of the training data.
-
-\begin{figure}[H]
-\centering
-  \begin{minipage}[b]{0.4\textwidth}
-    \includegraphics[width=\textwidth]{Standard-Perceptron.png}
-    \caption{Standard Perceptron (SSE = 4.90)}
-  \end{minipage}
-  \hfill
-  \begin{minipage}[b]{0.4\textwidth}
-    \includegraphics[width=\textwidth]{Modified-Perceptron-(Point-Grad).png}
-    \caption{Modified Perceptron (SSE = 7.56)}
-  \end{minipage}
-\end{figure}
-
-I propose that this way of constructing our perceptron is less powerful than the standard way. Consider when we are optimizing our point-slope representation, 
-
-\begin{align*}
-y - y_0 &= m(x - x_0) \\
-y &= y_0 + mx - mx_0 \\
-y &= mx + (y_0 + mx_0)
-\end{align*}
-
-We have just shown that (as we would expect) we can convert out point-slope representation into a intercept-slope representation. From here we see we can convert into something that could be represented by our original perceptron.
-
-\begin{align*}
-y = mx + (y_0 + mx_0)\\
-\Rightarrow -(y_0 + mx_0) -mx + y
-\end{align*}
-
-So given the generic form of our standard perceptron $A + Bx + Cy$ we see here that our modified perceptron can only ever learn a representation where C = 1, limiting what we can achieve. An easy way to check this is to see what happens if we use a standard perceptron to learn the data but keep the third weight (i.e. C) fixed at 1. Sure enough we get the following result when we run that experiment over 50000 iterations.
+The goal of this project is to further reduce the dependence between these expert networks, we want each to be responsible for deciding what it cares about thus making it possible for us to train them individually, we will call such expert networks boundary hunters. Consider the following situation, a very contrived toy example of our motivation for this project. We have a binary classification problem with the data split by a chevron. 
 
 \begin{figure}[H]
-\centering
-  \begin{minipage}[b]{0.4\textwidth}
-    \includegraphics[width=\textwidth]{Standard-Perceptron-(C=1).png}
-    \caption{Standard Perceptron with C = 1 (SSE = 7.56)}
-  \end{minipage}
-  \hfill
+	\centering
+	\begin{minipage}[b]{0.8\textwidth}
+		\includegraphics[width=\textwidth]{CHEV-DATA-EX.png}
+		\caption{Example data for situation}
+	\end{minipage}
+	\hfill
 \end{figure}
 
-So we are able to conclude that this method is unsuitable
+A single perceptron will go and place a horizontal line through the plane however this is not telling us anything interesting. And if we think about our adaptive mixtures of experts model, a system with only a single expert will simply have the one being responsible for every data point. In this situation we would like to train a boundary hunter by its self, which will identify a local feature (i.e. one side of the chevron), learn to classify it and ignore the data it cant deal with.
 
-\subsection{Normal \& Point Paramaterisation}
-This method involves learning the normal vector (which is what the standard perceptron is doing) along with a point on the hyperplane. This increases the number of parameters we have to learn by n (when we are in $\mathbb{R}^n$ but this is necessary as to implement a BH we have to define some neighborhood in which we care about and to do this we need to define it around some point on our hyperplane. So consider the following situation, we are learning the vector $n = [n_1, ..., n_n]$ normal to our hyperplane, the vector $a = [a_1, ..., a_n]$ which is on our hyperplane. We define $x = [x_1, ..., x_n]$ as our inputs making our weighted sum
+\chapter{Neuron Parametrisation}
+A perceptron is learning a hyperplane described by its normal vector plus a bias. To define our boundary hunter we want to specify a region of interest, a logical way to do this is to specify some region around a point. This is where we arrive at a problem, namely our current parametrisation of a neuron does not have the information to do.
+
+\section{Normal \& Point Parametrisation}
+To define our radius of interest we will start by describing it as a radius around a point. Leading us to the following definition.
+
+\theoremstyle{definition}
+\begin{definition}
+	The \textbf{Normal \& Point} parametrisation of a perceptron consists of the vector $n = [n_1, ..., n_k]$ normal to our hyperplane and $p = [p_1, ..., p_k]$ the point our hyperplane passes though.\\
+	
+	On input $x = [x_1, ..., x_k]$ to the neuron we define the weighted sum as 
+	
+	\begin{align*}
+	z = \sum_{i=1}^k n_i \cdot (p_i - x_i)
+	\end{align*}
+\end{definition}
+
+\begin{theorem}
+The normal \& point representation for a perceptron is equivalent to our standard definition
+\end{theorem}
+
+\begin{proof}
+Say we have some normal and point representation for a perceptron, $n = [n_1, ..., n_k], p = [p_1, ..., p_k]$, then we have $z$ as defined above
 
 \begin{align*}
-z = \sum_{i=1}^n n_i * (a_i - x_i)
+z &= \sum_{i=1}^k n_i \cdot (p_i - x_i)\\
+&= n \cdot [p_1 - x_1, ..., p_k - x_k]\\
+&= n_1 \cdot (p_1 - x_1) + ... + n_k \cdot (p_k - x_k)\\
+&= n_1p_1 - n_1x_1 .... n_kp_k - n_kx_k\\
+&= (n_1p_1 + ... + n_kp_k) - n_1x_1 - ... - n_kx_k
 \end{align*}
 
-We are still using SSE for loss and Sigmoid for activation.
+Now we can define an equivalent standard perceptron, where we have a bias term $b = n_1p_1 + ... + n_kp_k$ and each component of the normal vector $n^{'}_i = -n_i$
+
+\end{proof}
 
 \subsubsection{Comparison To Perceptron}
-Like before we compare the two parameterizations using the same data and over 50000 iterations in the 2D case. In the graph for the modified perceptron the green point is our vector on the hyperplane.
+We can compare the two experimentally to confirm our findings, using the same data and over 50,000 iterations. In the graph for our modified perceptron the green point is our vector on the hyperplane.
 
 
 \begin{figure}[H]
@@ -102,135 +103,138 @@ Like before we compare the two parameterizations using the same data and over 50
   \end{minipage}
 \end{figure}
 
-This modified perceptron has all the quality needed to proceed with creating the boundary hunters, whats better is this also generalizes to the $\mathbb{R}^n$ case.
+The figures above provide experimental evidence that our normal and point perceptron will converge to the same optimal solution as the standard one.
 
-\section{Boundary Hunter}
-Using the \textbf{Normal \& Point Parameterization} from before we construct boundary hunters, first we have a simple case where the area of interest for each boundary hunter is simply a circle with fixed radius, our goal is to make this area of interest an ellipse which the BH will learn.
+\chapter{Boundary Hunter: First Attempt}
+Using the \textbf{Normal \& Point Parametrization} we wish to train our neurons to be boundary hunters. We propose that this can be done by constructing a loss which encourages neurons to find local features. In this chapter we explore various ideas for loss functions, learning from our mistakes along the way.
 
-\subsection{Loss Function Design: Attempt 1}
-We wish to convert our Perceptron into a Boundary Hunter so to begin we start with designing a suitable loss function. So firstly we want to have some notion of how responsible a boundary hunter is for a given data point, for now we will just denote the responsibility for data point n by $r_n$ and worry about calculating this later. Consider our boundary hunter as reducing the uncertainty of the classes for each of the data points. As the data points get further away from our radius of expertises we become more uncertain about the class of the data point. So a reasonable loss function is 
-
-\begin{align}
-\frac{1}{n} \sum_{i=0}^n r_i(C_i log(y_i) + (1-C_i)log(1-y_i)) + (1-r_i) log(1/2)
-\end{align}
-
-
-\subsection{Responsibility Function Design}
-How do we construct $r_i$. We would like the following property's of a responsibility function
+\section{Responsibility Function}
+Before we construct our loss functions we need a notion for how responsible our boundary hunter is for a given data point, we denote $r_i$ the responsibility for data point $i$. We would like the following property's of a responsibility function
 
 \begin{enumerate}
-\item Making the area of interest include all points will reduce loss to standard log loss.
-\item All points inside the area of interest should have the same responsibility.
-\item Responsibility for points outside the area of interest should decrease as distance from area increases.
+	\item We want our responsibility to lie in the interval $[0, 1]$
+	\item continuous and differentiable
+	\item All points inside the area of interest should have the same responsibility.
+	\item Responsibility for points outside the area of interest should decrease as distance from area increases.
 \end{enumerate}
 
-The following function seems like a good place to start. The responsibility for any point inside the area of interest is 1, and as the data points get further away the responsibility decreases
+Property (1) is simply because it keeps things constrained, a responsibility of 0 means we do not care at all and 1 means we absolutely care. (2) is so our gradients work nicely with Backpropagation. (3) is because if we have two points in our radius of interest then it makes sense to be equally interested in them, it defeats the purpose of having a radius if being inside it does not definitively mean that we are interested. (4) guarantees that as we move further away from the edge of our radius we get less interested.
+
+The following function seems like a good place to start. The responsibility for any point inside the area of interest is 1, and as the data points get further away the responsibility decreases, we also satisfy property (1)
 
 \begin{align}
 r_i = 1 - \frac{max(0, d-r)}{abs(d-r) + 0.1}
 \end{align}
 
-However we note that this functions isn't smooth, and that can cause problems when training with back prop, not to mention the hard boundary (i.e. responsibility 1 for all points inside area of interest) will also have a negative effect on the gradients. While its reasonable for us to want property (2) it seems unlikely we will find a suitable function meeting the condition. So we remove property (2) and add the condition that our function must be smooth. We now turn to the logistic function, Let $f = 1 - \frac{1}{1 + e^{-S(d - r)}}$, where S is the steepness of the sigmoid. We will want our responsibility function to have a low sensitivity at each extreme, i.e. a small change in distance when the point is either very close to or far from our center point should have a negligible impact on the responsibility. How ever we want our function to be very sensitive around the border of our area of interest. By a purely arbatary decision and from inspecting the graphs I chose to have a steepness of 10 thus giving us the following function
+However we note that this functions is not smooth which is certainly a result of property (3). While its reasonable for us to want property (3) any function which satisfies this will not be continuous and differentiable everywhere, hence not satisfying property (2) and causes problems when training with Backpropagation as it is computing the gradient of our loss function, because of this we will not strictly consider property (3). Now we turn to the logistic function, $f = 1 - \frac{1}{1 + e^{-S(x - x_0)}}$, where S is the steepness of our sigmoid. A nice property is that by adjusting the steepness we can get close to satisfying property (3) with a continuous function. To achieve our approximation of property (3) we want our responsibility function to have a low sensitivity at each extreme, a small change in distance when the point is either very close to or far from our centre point should have a negligible impact on the responsibility, however we want our function to be very sensitive around the border of our expertise area. By a purely arbitrary decision we will start with a steepness of 10, giving us the following formula for responsibility.
 
 \begin{align}
 r_i = 1 - \frac{1}{1 + e^{-10(x-r)}}
 \end{align}
 
-While this does not meet our original criteria we see that for most points inside our area of interest the responsibility will be "close" to 1 and certainly above $\frac{1}{2}$, And if the area includes all the points then our loss will not reduce to the standard log loss but it will be close to it and as $r \to\infty$ we will converge to the standard log loss.
+where $r$ is the radius of our area.
 
-\subsubsection{Experimental Results}
-We train our boundary hunter over the same data for 10000 iterations and the result is somewhat uninteresting, it simply learns an area of interest which contains no points in the data set
+
+\section{Loss Function Design: Attempt 1}
+Consider our boundary hunter as reducing the uncertainty of what we think the class is for each data point. As the data points get further away from our radius of expertises we become more uncertain about its class. So a reasonable loss function is 
+
+\begin{align}
+\frac{1}{n} \sum_{i=0}^n r_i(C_i log(y_i) + (1-C_i)log(1-y_i)) + (1-r_i) log(1/2)
+\end{align}
+
+As $r_i \rightarrow 0$ the loss for data point $i$ is weighted more toward a coin toss as the boundary hunter is becoming more uncertain about how correct it is. The opposite is true as $r_i \rightarrow 1$, now the loss becomes weighted more towards the cross entropy and thus the actual output of the boundary hunter.
+
+\subsection{Experimental Results}
+Using these loss and responsibility functions our boundary hunter learns to care about all the data. Which is certainly doing the opposite of learning local features.
 
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt1-01.png}
-    \caption{Boundary Hunter with (1) as loss and (3) as responsibility}
+    \caption{Boundary Hunter with (3.3) as loss and (3.2) as responsibility}
   \end{minipage}
   \hfill
 \end{figure}
 
-As demonstrated using this loss does not produce any significant results.
+\subsection{Justification For Results}
+Consider our loss for a given data point with target $t$, prediction $y$ and responsibility $r$. Without loss of generality, assume $t = 1$. So then we are left with $r\ log(y) + (1-r)\ log(\frac{1}{2})$. We know that if we are getting it right $log(y) \leq log(\frac{1}{2})$. In this situation we are getting only a few wrong which allows the boundary hunter to take the hit for these while getting everything else right.
 
-\subsubsection{Justification For Results}
-So consider our loss for a given data point with target $t$, prediction $y$ and responsibility $r$. WILOG assume $t = 1$. So then we are left with $r\ log(y) + (1-r)\ log(\frac{1}{2})$. We know that $log(y) \leq log(\frac{1}{2})$
+\subsection{Reflection}
+Thinking of the problem in this way is intuitive but not strict enough in this form, we need a harsher penalty for getting things wrong to encourage the boundary hunter to have a near perfect accuracy and exclude data which compromises this.
 
-\subsubsection{Reflection}
-Essentially we want to reward our boundary hunter if it is an expert in a given region, so if it gets things wrong outside its area of interest thats good, and if it gets things correct outside its area of interest then thats bad.
+\section{Loss Function Design: Attempt 2}
+Based on our previous findings a more in depth consideration of a suitable loss function is required. Essentially we want to reward our boundary hunter if it is an expert in a given region, so if it gets things wrong outside its area of interest that's good, and if it gets things correct outside its area of interest then that's bad. Consider the following properties of our ideal loss function.
 
-\subsection{Loss Function Design: Attempt 2}
-Based on our previous findings a more in depth consideration of a suitable loss function is required. Consider the following properties of our ideal loss function. The basic idea is that we want to become experts in a given region
 \begin{enumerate}
 \item As a data point gets further away from our area of interest we "care less" about our accuracy for classifying that point.
-\item Increasing area of interest should decrease the loss iff increasing the area of interest allows us to classify more points correctly.
-\item Decreasing area of interest should decrease the loss iff reducing area of interest allows us to classify less points incorrectly in our area
+\item Increasing area of interest should decrease the loss if and only if increasing the area of interest allows us to classify more points correctly.
+\item Decreasing area of interest should decrease the loss if and only if reducing area of interest allows us to classify less points incorrectly in our area
 \end{enumerate}
 
-We can simplify these ideas into rules
+We can expand on these ideas to get the following
 
 \begin{enumerate}
 \item We want to be as accurate as possible in our area of interest and care less about our accuracy based on how "responsible" we are for the data point.
-\item We should be penalized for classifying things correctly out side our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point correctly but it is just outside our area of interest then we should be penalised).
-\item We should be rewarded for classifying things incorrectly our side our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point incorrectly and its just outside our area of interest then we should be rewarded).
+\item We should be penalized for classifying things correctly outside our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point correctly but it is just outside our area of interest then we should be penalised).
+\item We should be rewarded for classifying things incorrectly outside our area of interest based on how "not responsible" we are for the data point (i.e. if we are classifying a data point incorrectly and its just outside our area of interest then we should be rewarded).
 \end{enumerate}
 
-We now wish to convert this into a loss function. Item (1) is referring to $r_n$ multiplied by the standard cross entropy, restricted to points inside our area of interest. Then items (2) + (3) are referring to the opposite of our cross entropy multiplied by $r_n$ restricted to all points outside our area of interest.
+We now wish to convert this into a loss function. Item (1) is referring to $r_n$ multiplied by the standard cross entropy, restricted to points inside our area of interest. Items (2) + (3) are referring to the opposite of our cross entropy multiplied by $r_n$ restricted to all points outside our area of interest.
 
 \begin{align}
-- \big( \frac{1}{|I|} \big[ \sum_{i \in I}^n H(t_i, y_i) \big] + \frac{1}{|O|} \big[ \sum_{i \in O} H(\not t_i, y_i) \big] \big)
+- \big( \frac{1}{|I|} \big[ \sum_{i \in I} H(t_i, y_i) \big] + \frac{1}{|O|} \big[ \sum_{i \in O} H(1 - t_i, y_i) \big] \big)
 \end{align}
 
-Where $I$ is the set of points inside our area and $O$ is the set of points not in our area of interest.
+Where $I$ and $O$ are the sets of points inside and outside our area of interest retrospectively.
 
-\subsubsection{Experimental Results}
+\subsection{Experimental Results}
 
-With the same parameters as before we train a perception with this loss and find equally uninteresting results. Essentially the boundary hunter ends up positioning not doing anything useful at all
+With the same set-up as before this performs horribly, not doing anything of interest.
 
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt2-01.png}
-    \caption{Boundary Hunter with (?) as loss and (3) as responsibility}
+    \caption{Boundary Hunter with (3.4) as loss and (3.2) as responsibility}
   \end{minipage}
   \hfill
 \end{figure}
 
-\subsubsection{Reflection}
-The conditions used to construct this loss are perhaps to harsh, currently we are trying to maximize our error outside while minimizing our error inside. Where we don't actually care how incorrect we are outside our area.
+\subsection{Reflection}
+The conditions used to construct this loss are to harsh, currently we are trying to maximize our error outside the region while minimizing our error inside, really we don't care about the error outside our region, we only want to know if increasing our area will allow us to achieve a better error, supporting the use of our steep responsibility function as the points which will indicate whether we should increase our radius are the ones just on the border.
 
-\subsection{Loss Function Design: Important Observation}
-We take a step back and consider the basics of what we are trying to achieve. First we make an interesting observation which will change the way we approach designing this loss. Consider the simple loss function $L =\sum R(r) * CE$ where $R(r)$ is our responsibility function with radius as parameter and $CE$ is our cross entropy. And we want to compute the quantity $\frac{\partial r}{\partial L}$ so we can train r. We observe the following
+\section{Loss Function Design: Important Observation}
+We take a step back and consider the basics of what we are trying to achieve. First we make an interesting observation which will change the way we approach designing this loss. Consider the simple loss function $L =\sum R(r, i) * CE(i)$ where $R(r, i)$ is our responsibility function with paramater $r$ as the radius and $i$ as the data point, $CE(i)$ is our cross entropy of data point i. Given we want the quantity $\frac{\partial L}{\partial r}$ so we can train r, we compute the following.
 
 \begin{align*}
-\frac{\partial L}{\partial r} &= \frac{\partial}{\partial r} \big[ \sum R(r) * CE \big] \\
-&= \sum R^{'} (r) * CE
+\frac{\partial L}{\partial r} &= \frac{\partial}{\partial r} \big[ \sum R(r, i) * CE(i) \big] \\
+&= \sum R^{'} (r) * CE(i)
 \end{align*} 
 
-Namely the quantity $\frac{\partial L}{\partial r}$ doesn't actually tell us how changing the radius changes the error it simply tells us which direction to move the radius to increase the responsibility. This results in the radius constantly increasing.\\
+We observe that the quantity $\frac{\partial L}{\partial r}$ does not actually tell us how changing the radius changes our error, consider that $CE(i)$ is always positive, so essentially $\frac{\partial L}{\partial r} = \alpha * R^{'}(r)$, so it simply tells us which direction to move the radius to increase the responsibility. This results in the our area of interest constantly increasing. So we conclude that simply scaling the loss by a boundary hunters responsibility for a data point will not work.\\
 
-\subsection{Loss Function Design: Attempt 3}
-Based on what we just observed we need a new approach. We consider our boundary hunter as a sales man, who gets paid $\$B$ for selling something to someone who wants it (if the sales man is responsible for this individual) and gets penalized $\$C$ dollars for selling something to someone who doesn't want it. Using this model, the sales man's is to position them selves and adjust there responsibility so that they are maximizing there profit. Now we simply must quantify this. We know $y^t(1-y)^{t-1}$ is the probability we get something right (probability we are selling to someone who wants what we are selling). We arrive at the flowing quantity.
+\section{Loss Function Design: Attempt 3}
+Based on what we just observed a new approach is needed. We consider our boundary hunter as a salesperson, who gets paid $\$B$ for selling something to someone who wants it (if the salesperson is responsible for this individual) and gets penalized $\$C$ dollars for selling something to someone who does not want it. Using this model, the salesperson is to position them selves and adjust their responsibility so that they are maximizing there profit. Now we simply must quantify this, we know $y^t(1-y)^{t-1}$ is the probability we get something right (i.e. probability we are selling to someone who wants it). We arrive at the flowing quantity.
 
 \begin{align}
 L = \sum_{i=0} r_i * \big[Cy_i^{1-t_i}(1-y_i)^{t_i} - By_i^{t_i}(1-y_i)^{1-t_i} \big] 
 \end{align}
 
-While initially it seemed like this would suffer from the same problem described in the previous observation it does not. Consider the differential we know that $R^{'}(r)$ will always have the same sign but $Cy_i^{1-t_i}(1-y_i)^{t_i} - By_i^{t_i}(1-y_i)^{1-t_i} $ can be both positive and negative, so we end up in the situation where if we are losing more money that we are gaining then we will decreases our radius but if we are gaining more money than we are losing we will increase our radius
+While initially it seemed like this would suffer from the same problem described in the previous observation it does not. Consider the differential $R^{'}(r)$, we know that $R^{'}(r)$ will always have the same sign but $Cy_i^{1-t_i}(1-y_i)^{t_i} - By_i^{t_i}(1-y_i)^{1-t_i}$ can be both positive and negative, so we end up in the situation where if we are losing more money than we are gaining then we will decrease our radius so we can cut our losses, otherwise if we are making a profit then we will want to increase our sales area. 
 
-\subsubsection{Experimental Results}
-
-With the same parameters as before we train a perception with this loss and find that it grows to fit all the data
+\subsection{Experimental Results}
+With the same parameters as before we train a perception with this loss and find that its best solution is selling to everyone, essentially what a standard perceptron would provide.
 
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt3-01.png}
-    \caption{Boundary Hunter with (5) as loss and (3) as responsibility}
+    \caption{Boundary Hunter with (3.5) as loss and (3.2) as responsibility}
   \end{minipage}
   \hfill
 \end{figure}
 
-Not quite the results we where looking for but this outcome makes sense as there is a disproportionate amount of points. Increasing the parameter C will allow us to tune our boundary hunter to care more about getting things incorrect. To get a good spread we use C = 2, 2.5, 3
+Not quite the results we where looking for but this outcome makes sense, the solution presented gets many more points correct than it does wrong, so the boundary hunter is fulfilling its goal of making a maximal profit. Increasing the parameter C will allow us to tune our boundary hunter to care more about getting things incorrect. To get a good spread we use C = 2, 2.5, 3
 
 \begin{figure}[H]
   \centering
@@ -250,7 +254,7 @@ Not quite the results we where looking for but this outcome makes sense as there
   \end{minipage}
 \end{figure}
 
-How ever this only seems to change the positioning of the hyperplane and not the radius of our area of interest. If we impose some reasonable restrictions on the radius (i.e. $0.3 \leq r \leq 0.8$), set our C = 2 and adjust the responsibility function to be less steep (steepness of 5) then we can achieve some results which seem interesting
+However this only seems to change the hyperplane positioning and not solve the issue of our radius including everything. If we impose some reasonable restrictions on the radius (i.e. $0.3 \leq r \leq 0.8$), set our C = 2 and adjust the responsibility function to be less steep (steepness of 5) then we can achieve some better results which are more in line with our goal.
 
 \begin{figure}[H]
   \centering
@@ -266,7 +270,7 @@ How ever this only seems to change the positioning of the hyperplane and not the
   \hfill
 \end{figure}
 
-However more often than not we get results like following uninteresting ones
+However more often than not we get results like following, which do not achieve anything useful or meaningful.
 
 \begin{figure}[H]
   \centering
@@ -277,9 +281,9 @@ However more often than not we get results like following uninteresting ones
   \hfill
 \end{figure}
 
-The issue appears to be that of local optima, the solutions looking like what we want (Figure 13 and 14) certainly have lower error than when the solutioin is outside the data however the boundary hunter appears to have trouble escaping local optima to find these more interesting solutions.
+The issue appears to be that of local optima, the solutions looking like what we want (Figure 3.7 and 3.8) certainly have lower error than when the solution is outside the data however our boundary hunter appears to have trouble escaping local optima to find these more interesting solutions.
 
-To confirm this we look to plot the landscape of the loss function. To do this we will fix the radius and and the hyperplane position while varying the x and y position of the point, The parameters we fix for hyperplane are what we would want if trying to place our self on the left side of the chevron . Using the parameters as above, (steepness of 5, C = 2) We get the following plots.
+To confirm this we look to plot the landscape of our loss function, we will fix the radius and hyperplane position while varying the x and y coordinates of the point. These fixed parameters represent the hyperplane and radius we would want if trying to place our self on the left side of the chevron. Using a steepness of 5 and C = 2 we get the following plots.
 
 \begin{figure}[H]
   \centering
@@ -308,43 +312,45 @@ To confirm this we look to plot the landscape of the loss function. To do this w
   \hfill
 \end{figure}
 
-As clearly demonstrated by these graphs this loss function is not condusive to finding the optimal solution we are expecting.  There is a noticeable deformation in the contour where our expected solution is however it is unlikely that it will be found by the boundary hunter, more often than not we will end up on the outside of the data. For points outside our area of interest the responsibility rapidly approaches 0, this is what would cause the edge of the data to be an optimal solution. While this would indicate a responsibility function which is to steep, adjusting this has little effect.
+As clearly demonstrated by these graphs this loss function is not conducive to finding the optimal solution we are expecting.  There is a noticeable deformation in the contour where our expected solution is, however it is unlikely that it will be found by the boundary hunter, more often than not we will end up outside of the data. For points outside our area of interest the responsibility rapidly approaches 0, this is what would cause the edge to be an optimal solution. While this would indicate a responsibility function which is to steep.
 
 \begin{figure}[H]
   \centering
   \begin{minipage}[b]{0.8\textwidth}
     \includegraphics[width=\textwidth]{LossPlot-4.png}
-    \caption{Radius as 0.3, with steppness as 0.5}
+    \caption{Radius as 0.3, with steepness as 0.5}
   \end{minipage}
   \hfill
 \end{figure}
 
-\newpage
+Even with a significantly less steep responsibility function we still have the same landscape. 
 
-\section{Radial Basis Function Networks}
-\subsection{Definition}
-We turn our attention to a class of networks which seem very closely related to what we want, these are Radial Basis Functon Networks (RBF Networks). Before we can talk about RBF Networks we will first define what an RBF is.\\
+\section{Discussion}
+These results from this section leads me to believe a new approach is needed, simply trying to incorporate the responsibility into a loss function is, in essence a careful balancing act of rewards and penalty's for which there is possibly no solution. We need to investigate something other than simply designing a new loss function.
 
-A \textbf{radial basis function} is a function in which the output depends only on the distance from some point we call the center of the RBF. $f(x, c) = f(\lVert x - c \lVert)$.\\
+\chapter{Radial Basis Function Networks}
+We turn our attention to a class of networks which seem very closely related to what we want, these are Radial Basis Function (RBF) Networks. Before we can talk about RBF Networks we will first define what an RBF is.\\
 
-And then we can define an RBF Neuron as being a neuron with an activation stasfying the propertes of a radial basis function. Esentially each RBF Neuron is mesuring the similarity between its center and the input vector presented to it, the closer the input is to the center the closer the activation is to 1. Any RBF will do as an activation but we will be using one based on a the 1D Gaussian distrubution. The equation for a 1D Gussian is 
+The output of a \textbf{Radial Basis Function} depends only on the distance from its input to some point we call the centre of the RBF. $f(x, c) = f(\lVert x - c \lVert)$.\\
+
+And then we can define the activation of a RBF Neuron as being a function satisfying the properties of an RBF. Essentially each RBF Neuron is measuring the similarity between its centre and the input vector presented to it, the closer the input is to the centre the closer the activation is to 1. Any RBF will do as an activation but we will be using one based on a the 1D Gaussian distribution. The equation for a 1D Gaussian is 
 
 \begin{align*}
 f(x) = \frac{1}{\sigma \sqrt{2 \pi}} e^{-\frac{(x-\mu)^2}{2\sigma^2}}
 \end{align*}
 
-We can make some simplifications seing as we arnt interested in the standard deviation, making our activation
+We can make some simplifications seeing as we aren't interested in the standard deviation, making our activation
 
 \begin{align}
 a(x) = e^{-\beta \lVert x - c \lVert}
 \end{align}
 
-We use the $\beta$ term to controll how quickly the activation decays.\\
+We use the $\beta$ term to control how quickly the activation decays.\\
 
-An intuative view of an RBF network is we have a number of RBF Neurons which tells the output layer how close the input vector is to its center, the output neurons then use this information to make a decision about there activation by taking a weighted sum of the activations of the hidden neurons.
+An intuitive view of an RBF network is we have a number of RBF Neurons in the hidden layer which tells the output layer how close the input vector is to its centre, the output neurons then use this information to make a decision about their activation by taking a weighted sum of the outputs from the hidden layer.
 
-\subsection{Training RBF Networks}
-We start with the simplist method for training an RBF Network. Simply randomly initilize all the paramaters of the network and then use gradient descent to find better paramaters. Using this method we are able to achieve good classifiers for data that a standard perceptron would have no hope at doing anything interesting. 
+\section{Training RBF Networks}
+We will use the simplest method for training an RBF Network. Simply randomly initialize all the parameters of our network and then use gradient descent to find better ones. Using this method we are able to achieve good classifiers for data. 
 
 \begin{figure}[H]
   \centering
@@ -366,19 +372,22 @@ We start with the simplist method for training an RBF Network. Simply randomly i
   \end{minipage}
   \hfill
 
-The green x's represent our centroids while the red x's represent the points we are getting incorrect
+The green x's and red x's represent our centroids and the points we are getting incorrect retrospectively
 \end{figure}
 
-\newpage
+One can see that some of the RBF Neurons are placed in the centre of interesting points in the data.
 
-\section{RBF Boundary Hunters}
-Based on these RBF Networks, is it possible to use the ideas that we had previously to construct a boundary hunter. We create the concept of a RBF Boundary Hunter Neuron and derive an activation function for such a neuron.\\
+\section{Discussion}
+How can we convert the idea of these RBF Networks into boundary hunters? At the moment we have networks in which the hidden neurons don't classify point, they simply report to the output layer how confident they are that the input is in there radius. The RBF Neurons are trying to locate interesting blobs of data and position themselves in the middle.
 
-Consider that the output of a regular RBF Neuron is the unsertianty about wether the given point is within its radius, as the point gets further away we become less certian about our ownership and so the activation of the RBF Neuron decreases. We would like to incorpreate this into the output of our RBF Boundary Hunter as as the points move further away from the center then we become less sure about our classification. Let $f$ be our activation function, as our beleif that the point is in class 1 increases $f \rightarrow 1$ and as it decreases we have $f \rightarrow 0$, so if $f = \frac{1}{2}$ then we are unsure about the class of the point. It seemes logical for $f \rightarrow \frac{1}{2}$ as the distance between the center of a boundary hunter and a point increases. Now we can define our RFB Boundary Hunter Neuron for binary classification.\\
+\chapter{RBF Based Boundary Hunters}
+Based on these RBF Networks, is it possible to use the ideas that we had previously to construct a boundary hunter? In this chapter we create the concept of a RBF Boundary Hunter Neuron and derive an activation function.\\
+
+Consider that the output of a regular RBF Neuron is the uncertainty about whether the given point is within its radius, as the point gets further away we become less certain about our ownership and so the activation decreases in value. We would like to incorporate this into the output of our RBF Boundary Hunter as the points move further away from the centre then we become less sure about our classification. Let $f$ be our activation function, as our belief that the point is in class 1 increases $f \rightarrow 1$ and as it decreases we have $f \rightarrow 0$, so if $f = \frac{1}{2}$ then we are unsure about the class of a point. It seems logical for $f \rightarrow \frac{1}{2}$ as the distance between our centre of a boundary hunter and a point increases. Now we can define our RFB Boundary Hunter Neuron for binary classification.\\
 
 \theoremstyle{definition}
 \begin{definition}
-A \textbf{RBF Boundary Hunter Neuron} (for binary classification) in $\mathbb{R}^n$ has $2n + 1$ free paramaters. $\beta \in \mathbb{R}$, $\mathbf{c} \in \mathbb{R}^n$ and $\mathbf{n} \in \mathbb{R}^n$. $\beta, \mathbf{c}$ represent decay speed and center of the RBF portion of our neuron. $\mathbf{n}$ defines a hyperplane which passes through our point $\mathbf{c}$. We define the activation as folows
+A \textbf{RBF Boundary Hunter Neuron} (for binary classification) in $\mathbb{R}^n$ has $2n + 1$ free parameters. $\beta \in \mathbb{R}$, $\mathbf{c} \in \mathbb{R}^n$ and $\mathbf{n} \in \mathbb{R}^n$. $\beta, \mathbf{c}$ represent decay speed and centre of the RBF portion of our neuron. $\mathbf{n}$ defines a hyperplane which passes through our point $\mathbf{c}$. We define the activation as follows
 
 \begin{align}
 a(x) &= \frac{1}{2} + e^{-\beta \lVert x - c \lVert^2}(\frac{1}{1 + e^{-(\mathbf{n} \cdot (\mathbf{c} - x))}} - \frac{1}{2})
@@ -387,7 +396,7 @@ a(x) &= \frac{1}{2} + e^{-\beta \lVert x - c \lVert^2}(\frac{1}{1 + e^{-(\mathbf
 \end{definition}
 
 \subsection{Training RBF Boundary Hunters}
-Using the same method as before, randomly initializing all paramaters and then training using gradient descent. Allthough we must clip our betas to be positive, undesirible but necessary, if we dont clip them then the value outputted by the gate explodes.
+Using the same method as before, randomly initializing all parameters and then training using gradient descent. Although we must clip our betas to be positive, undesirable but necessary, if we don't clip them then the value outputted by the gate explodes.
 
 \begin{figure}[H]
   \centering
@@ -412,7 +421,7 @@ Using the same method as before, randomly initializing all paramaters and then t
 The green x's represent our centroids while the red x's represent the points we are getting incorrect
 \end{figure}
 
-These resuts show very promising and consistant results. The hyperplanes being placed ezactly where we would hope, however some results are a little misterious to understand. Returning to our motivation for this project, what happens if we train the chevron dataset with 1 RBF Boundary Hunter neuron?
+These are promising and consistent results. The hyperplanes being placed exactly where we would hope, however because the final decision is made by the output layer some results are a little mysterious to understand. Returning to our motivation for this project, what happens if we train the chevron dataset with 1 RBF Boundary Hunter neuron?
 
 \begin{figure}[H]
   \centering
@@ -423,27 +432,37 @@ These resuts show very promising and consistant results. The hyperplanes being p
   \hfill
 \end{figure}
 
-Unfourtunalty while its alot closer than anything before still not quite the result we are looking for.
-
-\newpage
+Unfortunately while its a lot closer than anything before still not quite the result we are looking for.
 
 \section{Gated Neurons}
 We now wish to move away from the idea of RFB Neurons and generalize our concept of a RBF Boundary Hunter Neuron to what we will call a \textbf{Gated Neuron}. This will allow us to define different methods for gating our neurons
 
 \theoremstyle{definition}
 \begin{definition}
-A \textbf{Gated Neuron} consists of a point $c$, a \textbf{gating function} $g$ and $n$, a normal vector to the decision boundary. The function $g$ takes the input to the neuron and outputs our certianty about our classification for that point, if $g$ is 0 then we are completly unsure about the input and if $g$ is 1 then we are certian.
+A \textbf{Gated Neuron} has a \textbf{gating function} $g$ and prediction function $f$. $g$ takes the neurons input and outputs our certainty about the classification for that point, if $g$ is 0 then we are completely unsure about the input and if $g$ is 1 then we are certain. The Gated Neuron activation function is defined below
 
 \begin{align}
-a(x) &= \frac{1}{2} + g(x) (\sigma(\mathbf{n} \cdot (\mathbf{c} - x)) - \frac{1}{2})
+a(x) &= \sigma(g(x) \cdot f(x))
 \end{align}
+
+\textbf{Note: } Equation (5.2) is equivalent to our previous activation (5.1) just simplified, we have moved the gating operation to inside the sigmoid function.
 
 \end{definition}
 
 \section{Hyperplane Gated Neuron}
-We wish now to try use a second hyperplane as our gating. So our gated neuron now has another normal vector, $\mathbf{m}$, which defines a hyperplane seperating the points we are certian about from the ones we are uncertian about. This makes our gating function $g = \sigma(\mathbf{m} \cdot (\mathbf{c} - x))$\\
+We wish now to define a gated neuron which uses a hyperplane as to decide what it cares about, in a similar fashion to before we will define this gated neuron with a centre point.
 
-Which then when trainied on our chevron data gives the folowing result
+\theoremstyle{definition}
+\begin{definition}
+A \textbf{Hyperplane Gated Neuron} is a gated neuron with the following parameters and functions. We have a point in our space $c$ (the centre of our gated neuron), and two hyperplanes which pass through this centre point, with normals $n$ and $m$. $n$ is the normal vector to the decision boundary and $m$ is the normal vector to a hyperplane which divides the plane into points we do and don't care about. Therefore giving us $g = \sigma(m \cdot (c - x))$ and $f = n \cdot (c - x)$. Now we can define the activation of such a neuron.
+
+\begin{align}
+a(x) = \sigma(\sigma(m \cdot (c - x)) \cdot (n \cdot (c - x)))
+\end{align}
+
+\end{definition}
+
+Which then when trained on our chevron data gives the following result
 
 \begin{figure}[H]
   \centering
@@ -456,6 +475,196 @@ Which then when trainied on our chevron data gives the folowing result
 The red line represents the gating hyperplane and the green line represents the decision boundary
 \end{figure}
 
-This is precisely what we are looking for interms of classification of a chevron with a single boundary hunter.
+This is precisely what we are looking for in terms of classifying a chevron with only one boundary hunter.
+
+\subsection{Comparison To Perceptron}
+It should be noted that these boundary hunters require $3n$ parameters, a little less than three times the number required for a regular perceptron. The next reasonable question to ask is what can we achieve with a three layer perceptron network? We will compare our boundary hunter and three layer perceptron network's. The perceptron network will consist of three hidden neurons and 1 output neuron as these two network configurations have a similar amount of free parameters. We will compare their performance over the chevron dataset, using 10-Fold Cross Validation and computing a 95\% confidence interval on the accuracies to compare performance.
+
+\begin{center}
+\begin{tabular}{| c | c | c |}
+\hline
+Network & Avg Training Error & Avg Test Error \\
+\hline
+\hline
+Perceptron & 0.00749882335194 & 0.0172678373009 \\
+\hline
+Gated Neuron & 0.0244635285134 & 0.0354204954447 \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{| c | c | c |}
+\hline
+Network & Training Error Conf Interval & Avg Test Error Conf Interval\\
+\hline
+\hline
+Perceptron & (0.007, 0.008) & (0.007, 0.028)\\
+\hline
+Gated Neuron & (0.014, 0.035) & (0.012, 0.059)\\
+\hline
+\end{tabular}
+\end{center}
+
+These 95\% confidence intervals show that there is a statistically significant difference between the training but not the test accuracies, so we can conclude that the two methods have the same performance.
+
+\subsection{Redundancy}
+As part of the definition of our Hyperplane Gated Neuron we included a centre point, which is redundant. The point is essentially specifying the intersection of our two lines but this is not needed. We can remove this point and achieve the same results but with fewer free parameters, only 2n + 2 to be precise.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{GN-MH-ONLY-01.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+
+Hyperplane Gated Boundary Hunter without the centre point
+\end{figure}
+
+Comparing the performance of these new hyperplane gated boundary hunters against a standard perceptron network with 2 hidden neurons we get the following results
+
+\begin{center}
+\begin{tabular}{| c | c | c |}
+\hline
+Network & Avg Training Error & Avg Test Error \\
+\hline
+\hline
+Perceptron & 0.023 & 0.037 \\
+\hline
+Gated Neuron & 0.023 & 0.031 \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{| c | c | c |}
+\hline
+Network & Training Error Conf Interval & Avg Test Error Conf Interval\\
+\hline
+\hline
+Perceptron & (0.010, 0.037) & (0.013, 0.061)\\
+\hline
+Gated Neuron & (0.017, 0.030) & (0.008, 0.053)\\
+\hline
+\end{tabular}
+\end{center}
+
+With this modification we still find no statistically significant difference between the performance of our two networks, however the gated neuron network as the advantage that in low dimensions we can better understand how the network is breaking up the problem.
+
+\subsection{Discussion}
+We would like to ask ourselves, does our current solution solve the problem laid out in the beginning. How is this solution different to the one proposed in \cite{jacobs1991adaptive}. Our goal was to create neurons which act independently and learn to classify local features of the data.\\
+
+Compared to the adaptive networks of experts it would definitely appear that we have created something with less dependency between the hidden neurons. In an adaptive network one neuron is only allowed slack off and get some things wrong if another neuron is picking up the slack and getting the points right. In our network each neuron is responsible for deciding what its interested in and it does not care what anything else is doing.\\
+
+One thing to consider however is that out network has an output layer, taking the classification from each of the boundary hunters and making a final decision about what our network is going to say, this reintroduces some dependency between the hidden neurons. We can make this fact apparent by observing the following example, the data we are training over is rectangle boundary. In the case with one boundary hunter a reasonable attempt is made to classify the data, but the hunter struggles to place its self on a boundary,
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{RecData-1HP.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+
+Rectangle data trained with a single boundary hunter
+\end{figure}
+
+which when compared to the result training two boundary hunters on the same data definitely shows that there is some collaboration between the boundary hunters as none of them converge on the same solution as the single one did.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{RecData-2HP.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+
+Rectangle data trained with two boundary hunter
+\end{figure}
+
+A question that now seems logical to ask is, can we remove the output neuron and achieve the same results, thus further removing dependency between the neurons?
+
+\chapter{Individual Hyperplane Gated Neurons}
+In this chapter we work towards answering the question, can we train hyperplane gated neurons individually and achieve similar results the networks of such neurons. This has a very familiar feel to it, and is in fact close to our first attempt at creating a loss just a different way of computing responsibility. Because of this we are not surprised when we see that training this set-up has the same effect as what happened when using the loss function (3.3), our boundary hunter decided to care about everything.\\
+
+Like before this result makes sense, if the boundary hunter can get away with getting everything right except say, 8 points, then this will have a lower error that getting penalised for not knowing half the points but getting everything it cares about right. Like before we see that not caring about a data point costs us $log(\frac{1}{2})$ which over a few points is a higher cost than simply a few wrong\\
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{CHEVData-SingleBH.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+
+Chevron data trained with a lone boundary hunter
+\end{figure}
+
+We now face the same issues as before, we need to provide a reward for ignoring data points, but how can we reward just enough without encouraging the boundary hunter to just ignore everything.
+
+\section{Biases}
+Currently our boundary hunter will take output a fair coin flip if it does not care about the data point. However this results in uninteresting solutions. It makes more sense for a boundary hunter to learn the value which they output in the case they don't care, we will call this parameter the bias. This bias parameter represents a default class assigned to points we don't care about, for this reason we will clip it to be between 0 and 1. When training on the chevron data we now get almost the same output as when using the Gated Hyperplane Networks.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{CHEVData-SingleBH-WithByas.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+
+Chevron data trained with a lone boundary hunter with the learnable bias
+\end{figure}
+
+This is all very well but its very easy to learn the bias when there is only one class on the other side of our caring boundary, something more substantial would be if we could achieve these results but with a noisy dataset. Consider the following noisy chevron
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{NoisyChev-RawData.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+With added noise the chevron becomes much less clear and could easily be interpreted in other ways, and while classifying the non noisy side of the chevron is still an option its not clear whether this is the best option. When trained the boundary hunter does not learn the side of the chevron but instead learns other boundary's in the data which with the added noise make a lot of sense.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.8\textwidth}
+    \includegraphics[width=\textwidth]{NoisyChev-BH-WithByas.png}
+    \caption{}
+  \end{minipage}
+  \hfill
+\end{figure}
+
+The solution depicted above seems just as sensible as fitting to the side of the chevron. It identifies sensible boundary's in the data which was the goal.
+
+\chapter{Sonar Problem}
+Given what we have achieved it would be interesting to see how this can perform on a real world data set with a lot more than 2 dimensions. The dataset we will consider is the \textbf{Sonar} dataset. This problem involves classification of sonar signals to determine whether they bounced off a rock or a mine. This is a benchmark problem in machine learning so we have a good idea of what a good classification accuracy is. We will split the data set into training and test sets, given the total 208 data points, we allocate 104 randomly selected data points to the test set and the rest to training (the same split as \cite{gorman1988analysis} has). While it would of been nice to employ K-Fold Cross Validation due to time constraints this was not an option.\\
+
+We will attempt to solve this problem using two different systems.
+
+\begin{enumerate}
+\item \textbf{Hoard of Boundary Hunters:} By training a number of individual boundary hunters on the data. Once all have been trainined to classify a point we will employ a voting system, where a boundary hunter will give its best guess about the class of a point if it cares about the point otherwise it will abstain.
+
+\item \textbf{Boundary Hunter Network:} By training a Hyperplane Gated Neuron Network on the data.
+\end{enumerate}
+
+\section{Results}
+The performance of a Nearest Neighbour Classifier on this data is \textbf{82.7\%} and the best testing performance achieved so far is \textbf{90.4\%} \cite{gorman1988analysis}. When using a Boundary Hunter Network with 15 hidden hidden neurons we where able to achieve \textbf{77.5\%} test set accuracy
+
+
+\chapter{Conclusion}
+Locating local features and ignoring the rest of the data, a seemingly simple enough problem quickly became an impossible balancing act of reward vs penalty. Using the idea of RBF Networks we where able to develop networks of boundary hunters but this was not quite solving the problem we had in mind as the network structure meant there was some dependency between the hidden neurons. Removing the network and individually training these boundary hunter neurons did not initially have the results we wanted but after adding the learnable biases we where able to achieve the results we where looking for on our toy examples. Some tests on simple noisy data also proved promising.\\
+
+Having our Boundary Hunters work on toy data is a good proof of concept but it is certainly not an accurate test of the performance for these neurons. Testing both the individual and networks of boundary hunters on Sonar benchmark problem showed that the ideas developed in this report do not give a concept which can be effectively implemented in practice.
+
+\section{Future Work}
+
+\newpage
+\bibliographystyle{acm}
+\bibliography{references}
 
 \end{document}

@@ -113,15 +113,37 @@ def generate_clumps():
             points.append([x/50.0,y/50.0])
             targets.append(0.0)
         
-    return np.array(points), np.array(targets)   
+    return np.array(points), np.array(targets)
+
+
+def generate_rectangle_data():
+    xBounds = [-50, 50]
+    yBounds = [-50, 50]
+    totalPoints = 100
+    
+    points = []
+    targets = []
+    
+    for i in range(0, totalPoints):
+        x = random.randint(xBounds[0], xBounds[1])
+        y = random.randint(yBounds[0], yBounds[1])
+        
+        if np.abs(x) < 30 and np.abs(y) < 30 :
+            points.append([x/50.0,y/50.0])
+            targets.append(0.0)
+        else:
+            points.append([x/50.0,y/50.0])
+            targets.append(1.0)
+        
+    return np.array(points), np.array(targets) 
 
 def sigmoid(phi):
     return 1.0/(1.0 + tf.exp(-phi))
 
-points, out = generateChevronData()#generate_clumps()#generate_split_data()#
+points, out = generate_rectangle_data()#generateChevronData()#generate_clumps()#generate_split_data()#
 in_size = 2
 out_size = 1
-num_centroids = 1
+num_centroids = 4
 num_outputs = 1
 
 inputs = tf.placeholder('float64', [in_size])
@@ -185,6 +207,8 @@ with tf.Session() as session:
     gates = session.run(gate_weights)
     #betas = session.run(betas)
     boundarys = session.run(hidden_weights)
+
+    return incorrect
 
 
 # Plot points on graph

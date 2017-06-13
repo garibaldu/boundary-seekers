@@ -1,0 +1,14 @@
+\begin{thebibliography}{1}
+
+\bibitem{gorman1988analysis}
+{\sc Gorman, R.~P., and Sejnowski, T.~J.}
+\newblock Analysis of hidden units in a layered network trained to classify
+  sonar targets.
+\newblock {\em Neural networks 1}, 1 (1988), 75--89.
+
+\bibitem{jacobs1991adaptive}
+{\sc Jacobs, R.~A., Jordan, M.~I., Nowlan, S.~J., and Hinton, G.~E.}
+\newblock Adaptive mixtures of local experts.
+\newblock {\em Neural computation 3}, 1 (1991), 79--87.
+
+\end{thebibliography}

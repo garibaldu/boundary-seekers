@@ -71,7 +71,7 @@ def get_final_class(predictions):
     if tally_0 == 0 and tally_1 == 0:
         return None
     
-    return 0 if tally_0 > tally_1 else 0
+    return 0 if tally_0 > tally_1 else 1
 
 def run_boundary_hunters(boundarys, gates, points, out):
     in_size = len(data[0])
@@ -138,14 +138,14 @@ def split_tt(test_size, data, targets):
 
 data, targets = SonarDataset.load()
 np.random.seed(432541)
-train, test = split_tt(40, data, targets)
+train, test = split_tt(104, data, targets)
 
 boundarys = []
 gates = []
 byass = []
 
-total_bh_to_train = 30
-iterations = 10000
+total_bh_to_train = 50
+iterations = 15000
 for i in range(total_bh_to_train):
     print("Training Number: ", i)
     boundary, gate, byas = train_boundary_hunter(train[0], train[1], iterations)

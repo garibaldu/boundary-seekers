@@ -130,7 +130,7 @@ data, targets = SonarDataset.load()
 np.random.seed(432541)
 train, test = split_tt(104, data, targets)
 
-training_inaccuracy, testing_inaccuracy = train_network(train[0], train[1], test[0], test[1], 30)
+training_inaccuracy, testing_inaccuracy = train_network(train[0], train[1], test[0], test[1], 50)
 print("Training: ", training_inaccuracy, ", Testing: ", testing_inaccuracy)
 #training_accuracys = []
 #testing_accuracys = []

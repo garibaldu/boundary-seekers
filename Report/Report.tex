@@ -642,26 +642,41 @@ With added noise the chevron becomes much less clear and could easily be interpr
 The solution depicted above seems just as sensible as fitting to the side of the chevron. It identifies sensible boundary's in the data which was the goal.
 
 \chapter{Sonar Problem}
-Given what we have achieved it would be interesting to see how this can perform on a real world data set with a lot more than 2 dimensions. The dataset we will consider is the \textbf{Sonar} dataset. This problem involves classification of sonar signals to determine whether they bounced off a rock or a mine. This is a benchmark problem in machine learning so we have a good idea of what a good classification accuracy is. We will split the data set into training and test sets, given the total 208 data points, we allocate 104 randomly selected data points to the test set and the rest to training (the same split as \cite{gorman1988analysis} has). While it would of been nice to employ K-Fold Cross Validation due to time constraints this was not an option.\\
+Given what we have achieved it would be interesting to see how this can perform on a real world data set with a lot more than 2 dimensions. The dataset we will consider is the \textbf{Sonar} dataset. This problem involves classification of sonar signals to determine whether they bounced off a rock or mine. This is a benchmark problem in machine learning so we have a good idea of what a good classification accuracy is. We will split the data set into training and test sets, given the total 208 data points, we randomly allocate 104 to the test set and the rest to training (the same split as \cite{gorman1988analysis} has). While it would of been nice to employ K-Fold Cross Validation due to time constraints this was not an option.\\
 
 We will attempt to solve this problem using two different systems.
 
 \begin{enumerate}
-\item \textbf{Hoard of Boundary Hunters:} By training a number of individual boundary hunters on the data. Once all have been trainined to classify a point we will employ a voting system, where a boundary hunter will give its best guess about the class of a point if it cares about the point otherwise it will abstain.
+\item \textbf{Hoard of Boundary Hunters:} By training a number of individual boundary hunters on the data. Once all have been trained to classify a point we will employ a voting system, where a boundary hunter will give its best guess about the class of a point if it cares about the point otherwise it will abstain.
 
 \item \textbf{Boundary Hunter Network:} By training a Hyperplane Gated Neuron Network on the data.
 \end{enumerate}
 
-\section{Results}
-The performance of a Nearest Neighbour Classifier on this data is \textbf{82.7\%} and the best testing performance achieved so far is \textbf{90.4\%} \cite{gorman1988analysis}. When using a Boundary Hunter Network with 15 hidden hidden neurons we where able to achieve \textbf{77.5\%} test set accuracy
+While the main focus of this report was to develop the Hoard model it will be interesting to compare its performance to the Network model to determine what (if any) benefit having the output neuron provides.
 
+\section{Results}
+The performance of a Nearest Neighbour Classifier on this data is \textbf{82.7\%} and the best testing performance achieved so far is \textbf{90.4\%} on the test set \cite{gorman1988analysis}. When using a Boundary Hunter Network with 30 hidden neurons we where able to achieve \textbf{80\%} accuracy on the testing set, if we increase the number of boundary hunters to 50 we do not see any improvement, getting an accuracy of \textbf{79\%}.\\
+
+When using our Hoard of Boundary Hunters system we where able to achieve \textbf{69\%} accuracy on the test set with 30 individually trained hunters, and an accuracy of \textbf{70\%} when using 50, so like before there is no significant change in performance. One benefit of these individual trained neurons is that they are able to tell us when they do not know something, when many have been combined together, like with what we have here, we end up in a situation where individually they do not take a guess at every data point but as a collective they do. What we would ideally see, in the case with 30 boundary hunters, is that the hoard collectively was unsure abut \textbf{31\%} of the test data but had a perfect accuracy on the parts of the test data which it was sure.\\
+
+One possible benefit the output neuron provides is keeping the neurons away from each other, a reason for the better performance in the Network model. In the Hoard model our boundary hunters have no way to communicate and thus have no idea they are part of a collective, they simply think the only thing that matters is their accuracy and position themselves accordingly . The output neuron in the Network model provides a means for communication and perhaps encourages solutions where the boundary hunters are more spread out.
 
 \chapter{Conclusion}
-Locating local features and ignoring the rest of the data, a seemingly simple enough problem quickly became an impossible balancing act of reward vs penalty. Using the idea of RBF Networks we where able to develop networks of boundary hunters but this was not quite solving the problem we had in mind as the network structure meant there was some dependency between the hidden neurons. Removing the network and individually training these boundary hunter neurons did not initially have the results we wanted but after adding the learnable biases we where able to achieve the results we where looking for on our toy examples. Some tests on simple noisy data also proved promising.\\
+Locating local features in the data and ignoring everything else, a seemingly simple enough problem quickly became a difficult  balancing act of reward vs penalty. After multiple iterations of attempting to design a loss we concluded that this was not a promising avenue to follow.\\
 
-Having our Boundary Hunters work on toy data is a good proof of concept but it is certainly not an accurate test of the performance for these neurons. Testing both the individual and networks of boundary hunters on Sonar benchmark problem showed that the ideas developed in this report do not give a concept which can be effectively implemented in practice.
+Using the idea of RBF Networks we where able to develop similar models of boundary hunters but this was not quite solving the problem we had in mind, the network structure meant there was some dependency between our hidden neurons. Removing the network and individually training these boundary hunter neurons did not initially have the results we wanted, after adding biases which where learned along side the weights we started to see the kind of results we where looking for. Some tests on simple noisy data also proved promising.\\
+
+Having our Boundary Hunters work on toy data is a good proof of concept but it is certainly not an accurate test of the performance for these neurons. Testing both individual and networks of boundary hunters on the Sonar benchmark problem showed that our ideas developed in this report do not give concepts which perform well enough to be effectively implemented in practice. Using either a Hoard or Network of boundary hunters does not provide better accuracy than a simple Nearest Neighbour Classifier. This suboptimal performance, is it caused simply because the base idea of a boundary hunter is flawed? or maybe our current attempt at one is unable to find all boundaries, meaning many neurons converge to the same position. We do not have enough information to make a determination on this point, however this is certainly an important question to be answered.\\
+
+Our Hoard of Boundary Hunters model is a first attempt at solving the problem presented in this report and has provided promising results on generated data, with and without noise. As it stands the Hoard model does not perform well enough to compete with today's top of the line neural networks. 
 
 \section{Future Work}
+The following list presents some possible directions for anyone interested in taking this idea further.
+
+\begin{enumerate}
+\item Implement performance tests of the current models using K-Means to get truer estimate of performance.
+\item Investigate if boundary hunters tend to converge on the same solution and if so develop a technique for keeping them out of each others way. Does this change improve performance of ether the Hoard or Network of boundary hunters.
+\end{enumerate}
 
 \newpage
 \bibliographystyle{acm}

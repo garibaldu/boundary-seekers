@@ -33,6 +33,8 @@
 
 \chapter{Introduction}
 
+Single or Multilayer Perceptron Networks are commonly trained to model and solve supervised learning problems. If however an attempt is made to train these networks to perform different tasks on different occasions then using a training algorythm such as Backpropergation will result is slow convergence and poor generalization. \textbf{Find Citation, Many papers say this but dont provide reference}
+
 In the paper Adaptive Mixtures of Local Experts \cite{jacobs1991adaptive} an idea was proposed to create systems where one has a number of expert networks, each responsible for only a subset of the data. While training our system we want to be able to learn which expert is responsible for which data points, this is where a gating network comes in, it is trained along side our expert networks and decides who is responsible for each data point. The idea being that if our problem consists of a training set which can be naturally divided up into distinct sub problems, then using these networks will provide better performance, by approximating all of these functions separately and interpolating between them, rather than assuming the data is governed by one function and trying to learning something that does not naturally exist.\\
 
 During training if an expert has a low responsibility for some data it is allowed to slack off and get it wrong, this means that another expert has a high responsibility for that data and must be doing its best to classify it correctly. So the expert networks are not completely independent as each one relies on the others to pick up the slack for what it gets wrong.\\

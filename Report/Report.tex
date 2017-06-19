@@ -445,7 +445,7 @@ A \textbf{Gated Neuron} has a \textbf{gating function} $g$ and prediction functi
 a(x) &= \sigma(g(x) \cdot f(x))
 \end{align}
 
-\textbf{Note: } Equation (5.2) is equivalent to our previous activation (5.1) just simplified, we have moved the gating operation to inside the sigmoid function.
+\textbf{Note: } Equation (5.2) is not equivalent to our previous activation (5.1), we have moved the gating operation to inside the sigmoid function as this is simpler.
 
 \end{definition}
 
@@ -604,7 +604,13 @@ Chevron data trained with a lone boundary hunter
 We now face the same issues as before, we need to provide a reward for ignoring data points, but how can we reward just enough without encouraging the boundary hunter to just ignore everything.
 
 \section{Biases}
-Currently our boundary hunter will take output a fair coin flip if it does not care about the data point. However this results in uninteresting solutions. It makes more sense for a boundary hunter to learn the value which they output in the case they don't care, we will call this parameter the bias. This bias parameter represents a default class assigned to points we don't care about, for this reason we will clip it to be between 0 and 1. When training on the chevron data we now get almost the same output as when using the Gated Hyperplane Networks.
+Currently our boundary hunter will take output a fair coin flip if it does not care about the data point. However this results in uninteresting solutions. It makes more sense for a boundary hunter to learn the value which they output in the case they don't care, we will call this parameter the bias $\beta$. Like before we have $g = \sigma(m \cdot (c - x))$ and $f = n \cdot (c - x)$. Now we can define the activation of such a neuron.
+
+\begin{align}
+a(x) = \sigma(g(x) \cdot f(x) + (1 - g(x)) \cdot \beta)
+\end{align}
+
+When training on the chevron data we now get almost the same output as when using the Gated Hyperplane Networks.
 
 \begin{figure}[H]
   \centering
@@ -639,7 +645,7 @@ With added noise the chevron becomes much less clear and could easily be interpr
   \hfill
 \end{figure}
 
-The solution depicted above seems just as sensible as fitting to the side of the chevron. It identifies sensible boundary's in the data which was the goal.
+Exactly what we wanted, getting a bunch of stuff wrong but on the other side of our caring boundary, everything we care about we are getting right. 
 
 \chapter{Sonar Problem}
 Given what we have achieved it would be interesting to see how this can perform on a real world data set with a lot more than 2 dimensions. The dataset we will consider is the \textbf{Sonar} dataset. This problem involves classification of sonar signals to determine whether they bounced off a rock or mine. This is a benchmark problem in machine learning so we have a good idea of what a good classification accuracy is. We will split the data set into training and test sets, given the total 208 data points, we randomly allocate 104 to the test set and the rest to training (the same split as \cite{gorman1988analysis} has). While it would of been nice to employ K-Fold Cross Validation due to time constraints this was not an option.\\
@@ -655,9 +661,9 @@ We will attempt to solve this problem using two different systems.
 While the main focus of this report was to develop the Hoard model it will be interesting to compare its performance to the Network model to determine what (if any) benefit having the output neuron provides.
 
 \section{Results}
-The performance of a Nearest Neighbour Classifier on this data is \textbf{82.7\%} and the best testing performance achieved so far is \textbf{90.4\%} on the test set \cite{gorman1988analysis}. When using a Boundary Hunter Network with 30 hidden neurons we where able to achieve \textbf{80\%} accuracy on the testing set, if we increase the number of boundary hunters to 50 we do not see any improvement, getting an accuracy of \textbf{79\%}.\\
+The performance of a Nearest Neighbour Classifier on this data is \textbf{82.7\%} and the best testing performance achieved so far is \textbf{90.4\%} on the test set \cite{gorman1988analysis}. When using a Boundary Hunter Network with 30 hidden neurons we where able to achieve \textbf{77\%} accuracy on the testing set, if we increase the number of boundary hunters to 50 we do not see any improvement, getting an accuracy of \textbf{79\%}.\\
 
-When using our Hoard of Boundary Hunters system we where able to achieve \textbf{69\%} accuracy on the test set with 30 individually trained hunters, and an accuracy of \textbf{70\%} when using 50, so like before there is no significant change in performance. One benefit of these individual trained neurons is that they are able to tell us when they do not know something, when many have been combined together, like with what we have here, we end up in a situation where individually they do not take a guess at every data point but as a collective they do. What we would ideally see, in the case with 30 boundary hunters, is that the hoard collectively was unsure abut \textbf{31\%} of the test data but had a perfect accuracy on the parts of the test data which it was sure.\\
+When using our Hoard of Boundary Hunters system we where able to achieve \textbf{68\%} accuracy on the test set with 30 individually trained hunters, and an accuracy of \textbf{70\%} when using 50, so like before there is no significant change in performance. One benefit of these individual trained neurons is that they are able to tell us when they do not know something, when many have been combined together, like with what we have here, we end up in a situation where individually they do not take a guess at every data point but as a collective they do. What we would ideally see, in the case with 30 boundary hunters, is that the hoard collectively was unsure abut \textbf{31\%} of the test data but had a perfect accuracy on the parts of the test data which it was sure.\\
 
 One possible benefit the output neuron provides is keeping the neurons away from each other, a reason for the better performance in the Network model. In the Hoard model our boundary hunters have no way to communicate and thus have no idea they are part of a collective, they simply think the only thing that matters is their accuracy and position themselves accordingly . The output neuron in the Network model provides a means for communication and perhaps encourages solutions where the boundary hunters are more spread out.
 

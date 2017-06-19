@@ -161,7 +161,7 @@ def generate_rectangle_data():
 def sigmoid(phi):
     return 1.0/(1.0 + tf.exp(-phi))
 
-points, out = generateChevronData()#generate_clumps()#generate_split_data()#generate_rectangle_data()#generateChevronDataWithNoise()#
+points, out = generate_clumps()#generateChevronDataWithNoise()#generateChevronData()#generate_split_data()#generate_rectangle_data()#generateChevronDataWithNoise()#
 in_size = 2
 out_size = 1
 num_centroids = 1
@@ -181,27 +181,30 @@ output_weights = tf.Variable(np.random.uniform(low=-0.5, high=0.5, size=(num_out
 inputs_prime = tf.concat([[1.0], inputs], axis=0)
 
 # Peform Computation
-prob = sigmoid(tf.reduce_sum(tf.multiply(inputs_prime, hidden_weights), 1))
+prob = tf.reduce_sum(tf.multiply(inputs_prime, hidden_weights), 1)
 
 g = sigmoid(tf.reduce_sum(tf.multiply(inputs_prime, gate_weights), 1))
-hidden_out = tf.add(byas, tf.multiply(g, tf.subtract(prob, byas)))
+#hidden_out = tf.add(byas, tf.multiply(g, tf.subtract(prob, byas)))
+hidden_out = sigmoid(tf.add(g * prob, (1-g) * byas))
+
+targets_prime = tf.expand_dims(targets, 1)
 
 output = hidden_out
-errors = tf.pow(tf.subtract(tf.expand_dims(targets, 1), output), 2.0)
+errors = -(targets_prime * tf.log(output) +  (1 -targets_prime) * tf.log(1 - output))#tf.pow(tf.subtract(tf.expand_dims(targets, 1), output), 2.0)
 error = tf.reduce_sum(errors)
 
 train_op = tf.train.GradientDescentOptimizer(0.01).minimize(error)
-clip_byas = tf.assign(byas, tf.clip_by_value(byas, 0, 1))
+#clip_byas = tf.assign(byas, tf.clip_by_value(byas, 0, 1))
 
 model = tf.global_variables_initializer()
 
 with tf.Session() as session:
     session.run(model)
     
-    for e in range(0):
+    for e in range(6000):
         for d in range(len(points)):
             session.run(train_op, feed_dict={inputs: points[d], targets: [out[d]]})
-            session.run(clip_byas)
+            #session.run(clip_byas)
             #session.run(clip_op_betas)
 
         if e % 10 == 0:
@@ -243,12 +246,12 @@ print("Type 1: ", len(c2))
 plotScatter(c1,'y')
 plotScatter(c2, 'b')
 
-#for i in range(len(boundarys)):
-#    plot_weights(boundarys[i], gates[i], 'g')
+for i in range(len(boundarys)):
+    plot_weights(boundarys[i], gates[i], 'g')
 
 
-#for point in incorrect:
-    #plot_incorrect(point)
+for point in incorrect:
+    plot_incorrect(point)
 
 plt.gca().set_aspect('equal')
 plt.xlim(xmin=-1.5, xmax=1.5)

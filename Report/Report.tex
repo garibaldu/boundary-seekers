@@ -33,40 +33,84 @@
 
 \chapter{Introduction}
 
-Single or Multilayer Perceptron Networks are commonly trained to model and solve supervised learning problems. If however an attempt is made to train these networks to perform different tasks on different occasions then using a training algorythm such as Backpropergation will result is slow convergence and poor generalization. \textbf{Find Citation, Many papers say this but dont provide reference}
+Single or Multilayer Perceptron Networks are commonly trained to model and solve a supervised learning problem. If an attempt is made to train these networks to perform different tasks on separate occasions then using a training algorithm such as Backpropergation will result is slow convergence and poor generalization. \textbf{Find Citation, Many papers say this but don't provide reference}.\\
 
-In the paper Adaptive Mixtures of Local Experts \cite{jacobs1991adaptive} an idea was proposed to create systems where one has a number of expert networks, each responsible for only a subset of the data. While training our system we want to be able to learn which expert is responsible for which data points, this is where a gating network comes in, it is trained along side our expert networks and decides who is responsible for each data point. The idea being that if our problem consists of a training set which can be naturally divided up into distinct sub problems, then using these networks will provide better performance, by approximating all of these functions separately and interpolating between them, rather than assuming the data is governed by one function and trying to learning something that does not naturally exist.\\
+If it is known prior to training that our problem is the composition of sub tasks, then a more suitable system should be used to avoid the previously discussed issues. In the paper Adaptive Mixtures of Local Experts \cite{jacobs1991adaptive} an idea was proposed to create systems consisting expert networks, each responsible for learning a subset of the data. Another neural network takes examples as inputs and outputs the responsibility for each of the experts. Such a system is called a Mixtures of Experts (MoE) model.\\
 
-During training if an expert has a low responsibility for some data it is allowed to slack off and get it wrong, this means that another expert has a high responsibility for that data and must be doing its best to classify it correctly. So the expert networks are not completely independent as each one relies on the others to pick up the slack for what it gets wrong.\\
+During training of a MoE model the gating network is learning how it can best assign examples to the various experts. If a case is presented to the model which it gets wrong then the weight changes are localized to the gating network and the networks to which it assigned the example. Therefore experts which operate in different situations (regions of the data) do not directly interfere with each others weights, removing dependency between the expert networks.\\
 
-The goal of this project is to further reduce the dependence between these expert networks, we want each to be responsible for deciding what it cares about thus making it possible for us to train them individually, we will call such expert networks boundary hunters. Consider the following situation, a very contrived toy example of our motivation for this project. We have a binary classification problem with the data split by a chevron. 
+Consider that for a given example the responsibility of network $j$ is given by $p_j = \frac{e^x_j}{\sum_i e^x_i}$,  also consider the loss function they use, which is a linear combination of the outputs from each expert.
+
+\begin{align}
+E^c = -log \sum_i p^c_i e^{-\frac{1}{2} \lVert d^c - o_i^c \rVert^2 }
+\end{align}
+
+now observe the following partial derivative
+
+\begin{align*}
+\frac{\partial E^c}{\partial o_i^c} &= \bigg[ \frac{p_i^c e^{-\frac{1}{2} \lVert d^c - o_i^c \rVert^2}}{\sum_j p_j^c e^{-\frac{1}{2} \lVert d^c - o_j^c \rVert^2}} \bigg] \cdot (d^c - o_i^c)	
+\end{align*}
+
+The term $\bigg[ \frac{p_i^c e^{-\frac{1}{2} \lVert d^c - o_i^c \rVert^2}}{\sum_j p_j^c e^{-\frac{1}{2} \lVert d^c - o_j^c \rVert^2}} \bigg]$ is a Softmax function on the output of our expert networks. Consequently we see that $\frac{\partial E^c}{\partial o_i^c}$ takes into account network $i$'s performance against all others. Demonstrating that there still exists dependency between the experts.\\
+
+We speculate that further reducing and eliminating the dependency between expert networks will improve learning. To motivate this we identify two problems with the MoE model and explain how reducing dependency could solve these.\\ 
+
+Currently if using an MoE model the number of experts must be decided beforehand. You must ether have prior knowledge about the number of experts needed or perform a trial and error process to identify the optimal amount. If the experts where completely independent then we could build our system by adding them until we achieve our desired accuracy.\\
+
+Consider a MoE model with only one expert. This will just act like a standard Perceptron Network given the gate will have no choice but to assign all examples to the single expert. This is simple enough to show $p_1 = \frac{e^{x_1}}{\sum_i e^{x_i}} = \frac{e^{x_1}}{e^{x_1}} = 1$. The following is a concrete example of how this results in a poor classifier which does not truly model the data. We have a binary classification problem with the data split by a chevron. 
 
 \begin{figure}[H]
 	\centering
-	\begin{minipage}[b]{0.8\textwidth}
-		\includegraphics[width=\textwidth]{CHEV-DATA-EX.png}
-		\caption{Example data for situation}
+	\begin{minipage}[b]{0.5\textwidth}
+		\includegraphics[width=\textwidth]{Standard-Perceptron.png}
+		\caption{Example data for situation with line representing a trained perceptron}
+		\label{fig:intro-concrete-example}
 	\end{minipage}
 	\hfill
 \end{figure}
 
-A single perceptron will go and place a horizontal line through the plane however this is not telling us anything interesting. And if we think about our adaptive mixtures of experts model, a system with only a single expert will simply have the one being responsible for every data point. In this situation we would like to train a boundary hunter by its self, which will identify a local feature (i.e. one side of the chevron), learn to classify it and ignore the data it cant deal with.
+Shown in Fig \ref{fig:intro-concrete-example}, a single Perceptron (an MoE model with only one expert) trained on this data does not produce anything meaningful, a low error on the data is achieved but the decision boundary location has not captured any structure of the data. If training a MoE model with no dependency between experts, then individually they should learn which data they are responsible for regardless of if there are any other experts networks, consequently this would mean giving each one its own gate. The goal would be to train experts which identify the local features of the data, in Fig \ref{fig:intro-concrete-example} these would be both sides of the chevron. With no communication between experts  could end up with some learning the same information. Perhaps the minimal amount of communication between experts needed is that they stay out of each others way.\\
+
+In the current MoE model the dependency between experts is a consequence of two things, the gating network and that the error is a combination of the output from all experts. To remove this dependency each expert should decide what it is responsible for, thus making it possible to train them separately using an error function which only considers their individual output. \\
+
+To investigate this speculation, we developed a model based on the previous observations. Experts are trained independently and identify local features in the data. Because of this experts can be added or removed from the data as needed. These independent experts will be called \text{boundary hunters}\\
+
+This paper reports on the development of our model and describes the path we followed to arrive at our final solution.
 
 \chapter{Neuron Parametrisation}
-A perceptron is learning a hyperplane described by its normal vector plus a bias. To define our boundary hunter we want to specify a region of interest, a logical way to do this is to specify some region around a point. This is where we arrive at a problem, namely our current parametrisation of a neuron does not have the information to do.
-
-\section{Normal \& Point Parametrisation}
-To define our radius of interest we will start by describing it as a radius around a point. Leading us to the following definition.
+A perceptron is learning a decision boundary described by a hyperplane, defined by vector normal $w = [w_1, ..., w_n]$ to the plane and a bias $b$.
 
 \theoremstyle{definition}
 \begin{definition}
-	The \textbf{Normal \& Point} parametrisation of a perceptron consists of the vector $n = [n_1, ..., n_k]$ normal to our hyperplane and $p = [p_1, ..., p_k]$ the point our hyperplane passes though.\\
+	A \text{Perceptron} with vector $w = [w_1, ..., w_n]$ normal to the decision boundary and bias $b$ has weighted sum for input $x = [x_1, ..., x_n]$ defined as
+	
+	\begin{align*}
+		z = \sum_{i=1}^{n} w_i x_i
+	\end{align*}
+	
+	and output $a(z) = f(z)$
+	
+	where $f(z) = 1$ indicates that $x$ is of class 1 and $f(x) = 0$ class 0.
+\end{definition}
+
+To define our boundary hunter we want to specify a region of interest, as discussed before they must be able to decide what examples they are interested in. A logical way to define this region is to give the perceptron a centre and specify a radius around it, anything inside this area it will care about. A perceptron's parameters wont allow this, so the parametrisation must be adapted.
+
+\section{Normal \& Point Parametrisation}
+To define our radius of interest we will start by describing it as a radius around some point. Leading us to the following definition.
+
+\theoremstyle{definition}
+\begin{definition}
+	The \textbf{Normal \& Point} parametrisation of a perceptron consists of the vector $w = [w_n, ..., w_n]$ normal to our hyperplane and $m = [m_n, ..., m_n]$ the point our hyperplane passes though.\\
 	
 	On input $x = [x_1, ..., x_k]$ to the neuron we define the weighted sum as 
 	
 	\begin{align*}
-	z = \sum_{i=1}^k n_i \cdot (p_i - x_i)
+	z = \sum_{i=1}^n w_i \cdot (m_i - x_i)
 	\end{align*}
+	
+	and output $a(z) = f(z)$
+	
+	where $f(z) = 1$ indicates that $x$ is of class 1 and $f(x) = 0$ class 0.
 \end{definition}
 
 \begin{theorem}
@@ -74,22 +118,21 @@ The normal \& point representation for a perceptron is equivalent to our standar
 \end{theorem}
 
 \begin{proof}
-Say we have some normal and point representation for a perceptron, $n = [n_1, ..., n_k], p = [p_1, ..., p_k]$, then we have $z$ as defined above
+Assume that both parametrisations are using the same activation, then it is enough to show that the weighted sums would be the same. Let $w = [w_1, ..., w_n], m = [m_1, ..., m_n]$ be the parameters for a normal and point perceptron.
 
 \begin{align*}
-z &= \sum_{i=1}^k n_i \cdot (p_i - x_i)\\
-&= n \cdot [p_1 - x_1, ..., p_k - x_k]\\
-&= n_1 \cdot (p_1 - x_1) + ... + n_k \cdot (p_k - x_k)\\
-&= n_1p_1 - n_1x_1 .... n_kp_k - n_kx_k\\
-&= (n_1p_1 + ... + n_kp_k) - n_1x_1 - ... - n_kx_k
+z &= \sum_{i=1}^n w_i \cdot (m_i - x_i)\\
+&= w \cdot [m_1 - x_1, ..., m_n - x_n]\\
+&= w_1 \cdot (m_1 - x_1) + ... + w_n \cdot (m_k - x_k)\\
+&= w_1m_1 - w_1x_1 .... w_nm_k - w_nx_n\\
+&= (w_1m_1 + ... + w_nm_n) - w_1x_1 - ... - w_nx_n
 \end{align*}
 
-Now we can define an equivalent standard perceptron, where we have a bias term $b = n_1p_1 + ... + n_kp_k$ and each component of the normal vector $n^{'}_i = -n_i$
-
+Now we can define an equivalent standard perceptron, where we have a bias term $b = w_1m_1 + ... + w_nm_n$ and each component of $m^{'}$ as $m^{'}_i = -m_i$
 \end{proof}
 
 \subsubsection{Comparison To Perceptron}
-We can compare the two experimentally to confirm our findings, using the same data and over 50,000 iterations. In the graph for our modified perceptron the green point is our vector on the hyperplane.
+Figures \ref{fig:com-standard-perceptron} \& \ref{fig:com-normal-point} compare the two parametrisation experimentally to confirm the proof presented above, showing that both will converge to the same optimal solution. The centre of the normal and point perceptron is represented by the green dot in the graph.\\
 
 
 \begin{figure}[H]
@@ -97,72 +140,75 @@ We can compare the two experimentally to confirm our findings, using the same da
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{Standard-Perceptron.png}
     \caption{Standard Perceptron (SSE = 3.90)}
+    \label{fig:com-standard-perceptron}
   \end{minipage}
   \hfill
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{Modified-Perceptron-(Normal-Point).png}
     \caption{Modified Perceptron (SSE = 3.90)}
+    \label{fig:com-normal-point}
   \end{minipage}
 \end{figure}
 
-The figures above provide experimental evidence that our normal and point perceptron will converge to the same optimal solution as the standard one.
-
 \chapter{Boundary Hunter: First Attempt}
-Using the \textbf{Normal \& Point Parametrization} we wish to train our neurons to be boundary hunters. We propose that this can be done by constructing a loss which encourages neurons to find local features. In this chapter we explore various ideas for loss functions, learning from our mistakes along the way.
-
 \section{Responsibility Function}
-Before we construct our loss functions we need a notion for how responsible our boundary hunter is for a given data point, we denote $r_i$ the responsibility for data point $i$. We would like the following property's of a responsibility function
+The \textbf{Normal \& Point Parametrization} has been shown to be equivalent to the regular Perceptron, it can now be used as a base to develop a boundary hunter. Before a suitable loss function can be designed the concept of responsibility must be further developed. Using the centre point plus a radius how can the boundary hunters responsibility for an example be quantified? Let $r$, $R(r, i)$ be denoted the radius and responsibility for example $i$ given the radius $r$ retrospectively.\\
+
+A candidate list of properties for $R$ follows.
 
 \begin{enumerate}
-	\item We want our responsibility to lie in the interval $[0, 1]$
-	\item continuous and differentiable
-	\item All points inside the area of interest should have the same responsibility.
-	\item Responsibility for points outside the area of interest should decrease as distance from area increases.
+	\item We want our responsibility to lie in the interval $[0, 1]$. This keeps things constrained, a responsibility of 0 or 1 means we ether care or not retrospectively.
+	\item continuous and differentiable so our gradients work nicely with Backpropagation
+	\item Any point inside or outside the area of interest should have responsibility close to 1 or 0 retrospectively.
+	\item Responsibility for points outside the area of interest should decrease as distance from area increases, this guarantees that as we move further away from the edge of our radius we get less interested
 \end{enumerate}
 
-Property (1) is simply because it keeps things constrained, a responsibility of 0 means we do not care at all and 1 means we absolutely care. (2) is so our gradients work nicely with Backpropagation. (3) is because if we have two points in our radius of interest then it makes sense to be equally interested in them, it defeats the purpose of having a radius if being inside it does not definitively mean that we are interested. (4) guarantees that as we move further away from the edge of our radius we get less interested.
+A logical choice for $R$ is the logistic function, $f = 1 - \frac{1}{1 + e^{-S(x - x_0)}}$ where S is the steepness, which stasfys (1) - (4). The steepness can be thought of this as how rapidly our interest changes at the border of our region, a steep function means we rapidly move from caring to ignoring an example, where as a more gradual slope means it takes longer for us to loose interest.\\
 
-The following function seems like a good place to start. The responsibility for any point inside the area of interest is 1, and as the data points get further away the responsibility decreases, we also satisfy property (1)
-
-\begin{align}
-r_i = 1 - \frac{max(0, d-r)}{abs(d-r) + 0.1}
-\end{align}
-
-However we note that this functions is not smooth which is certainly a result of property (3). While its reasonable for us to want property (3) any function which satisfies this will not be continuous and differentiable everywhere, hence not satisfying property (2) and causes problems when training with Backpropagation as it is computing the gradient of our loss function, because of this we will not strictly consider property (3). Now we turn to the logistic function, $f = 1 - \frac{1}{1 + e^{-S(x - x_0)}}$, where S is the steepness of our sigmoid. A nice property is that by adjusting the steepness we can get close to satisfying property (3) with a continuous function. To achieve our approximation of property (3) we want our responsibility function to have a low sensitivity at each extreme, a small change in distance when the point is either very close to or far from our centre point should have a negligible impact on the responsibility, however we want our function to be very sensitive around the border of our expertise area. By a purely arbitrary decision we will start with a steepness of 10, giving us the following formula for responsibility.
+The sigmoid function guarantees that any example will have $R(r, i) > \frac{1}{2}$, $R(r, i) < \frac{1}{2}$, $R(r, i) = \frac{1}{2}$ if it is inside, outside or on the border retrospectively. As $S \rightarrow \infty$ then the responsibility approaches a step function, being 1 for any example inside the boundary hunters region and 0 otherwise. If the steepness is to low then examples far away from the boundary hunter will have to much of an impact, on the other hand if its to high then the boundary hunter wont consider any example its not interested in. \text{So why did I pick 10?}
 
 \begin{align}
-r_i = 1 - \frac{1}{1 + e^{-10(x-r)}}
+R(r, i) = 1 - \frac{1}{1 + e^{-10(d_i-r)}}
+\label{equ:responsibility}
 \end{align}
 
-where $r$ is the radius of our area.
-
+where $d_i$ is the distance example $i$ is from the boundary hunters centre.
 
 \section{Loss Function Design: Attempt 1}
-Consider our boundary hunter as reducing the uncertainty of what we think the class is for each data point. As the data points get further away from our radius of expertises we become more uncertain about its class. So a reasonable loss function is 
+Take the output of a boundary hunter to be $\widehat{t_i}$, this is the probability that example $i$ has a class of 1, i.e. $p_{t_i=1} = \widehat{t_i}$ and $p_{t_i=0} = 1 - \widehat{t_i}$. If the true class is 1 then probability of being correct $p_c$ is $p_{t_i=1}$, likewise if the true class is 0 then $p_c = p_{t_i=0}$. The boundary hunter should have a concept of certainty. If the given example has a high responsibility (i.e. is close to the boundary hunters centre) then the hunter should be certain its answer is correct, likewise a low responsibility means the example is far from the boundary hunters centre and therefore it should be uncertain about the correctness of its answer.\\
+
+As uncertainty about the boundary hunters output increases $t_i$ (probability of the examples true class being 1) approaches $\frac{1}{2}$, a fair coin toss, i.e. $R(r, i) \rightarrow 0$ then $p_i \rightarrow \frac{1}{2}$.\\
+
+If the boundary hunter has a high responsibility for an example then the loss is its accuracy at predicting the correct class, using the cross entropy this is quantified as $t_i log(\widehat{t_i}) + (t_i)log(1 - \widehat{t_i})$. If the responsibility for an example is low then its penalty for that instance is the error for predicting a fair coin toss, also using the cross entropy results with $log(\frac{1}{2})$. Equation \ref{equ:loss1} is the resulting loss function
 
 \begin{align}
-\frac{1}{n} \sum_{i=0}^n r_i(C_i log(y_i) + (1-C_i)log(1-y_i)) + (1-r_i) log(1/2)
+L = -\frac{1}{N} \sum_{n=0}^N R(r, n) (t_n log(\widehat{t_n}) + (1-t_n)log(1 - \widehat{t_n})) + (1-R(r, n)) log(1/2)
+\label{equ:loss1}
 \end{align}
 
-As $r_i \rightarrow 0$ the loss for data point $i$ is weighted more toward a coin toss as the boundary hunter is becoming more uncertain about how correct it is. The opposite is true as $r_i \rightarrow 1$, now the loss becomes weighted more towards the cross entropy and thus the actual output of the boundary hunter.
-
 \subsection{Experimental Results}
-Using these loss and responsibility functions our boundary hunter learns to care about all the data. Which is certainly doing the opposite of learning local features.
+Figure \ref{fig:boundaryhunter-l1-01} shows a boundary hunter trained with equations \ref{equ:responsibility} \& \ref{equ:loss1} for the loss and responsibility functions.
 
 \begin{figure}[H]
 \centering
   \begin{minipage}[b]{0.4\textwidth}
     \includegraphics[width=\textwidth]{BoundaryHunter-Attempt1-01.png}
-    \caption{Boundary Hunter with (3.3) as loss and (3.2) as responsibility}
+    \caption{Boundary Hunter with \ref{equ:loss1} as loss and \ref{equ:responsibility} as responsibility}
+    \label{fig:boundaryhunter-l1-01}
   \end{minipage}
   \hfill
 \end{figure}
 
-\subsection{Justification For Results}
-Consider our loss for a given data point with target $t$, prediction $y$ and responsibility $r$. Without loss of generality, assume $t = 1$. So then we are left with $r\ log(y) + (1-r)\ log(\frac{1}{2})$. We know that if we are getting it right $log(y) \leq log(\frac{1}{2})$. In this situation we are getting only a few wrong which allows the boundary hunter to take the hit for these while getting everything else right.
+The boundary hunter has learnt to care about all the data 
 
-\subsection{Reflection}
-Thinking of the problem in this way is intuitive but not strict enough in this form, we need a harsher penalty for getting things wrong to encourage the boundary hunter to have a near perfect accuracy and exclude data which compromises this.
+\subsection{Discussion}
+Let $l_i = R(r, i) (t_i log(\widehat{t_i}) + (1-t_i)log(1 - \widehat{t_i})) + (1-R(r, n)) log(1/2)$. In figure \ref{fig:boundaryhunter-l1-01} the boundary hunter has a high responsibility for every example, reducing \ref{equ:loss1} to the standard cross entropy loss
+
+\begin{align*}
+L = -\frac{1}{N} \sum_{n=0}^N R(r, n) (t_n log(\widehat{t_n}) + (1-t_n)log(1 - \widehat{t_n}))
+\end{align*} 
+
+The boundary hunter is ignoring the modification made to allow the it to ignore examples. Indicating that the penalty for an incorrect classification is to low, the boundary hunter can achieve a good loss and still have miss classifications. Ideally the boundary hunter would have a perfect classification accuracy and choose to ignore any data which compromises this.
 
 \section{Loss Function Design: Attempt 2}
 Based on our previous findings a more in depth consideration of a suitable loss function is required. Essentially we want to reward our boundary hunter if it is an expert in a given region, so if it gets things wrong outside its area of interest that's good, and if it gets things correct outside its area of interest then that's bad. Consider the following properties of our ideal loss function.

@@ -93,7 +93,7 @@ A perceptron is learning a decision boundary described by a hyperplane, defined 
 	where $f(z) = 1$ indicates that $x$ is of class 1 and $f(x) = 0$ class 0.
 \end{definition}
 
-To define our boundary hunter we want to specify a region of interest, as discussed before they must be able to decide what examples they are interested in. A logical way to define this region is to give the perceptron a centre and specify a radius around it, anything inside this area it will care about. A perceptron's parameters wont allow this, so the parametrisation must be adapted.
+To define our boundary hunter we want to specify a region of interest, as discussed before they must be able to decide what examples they are interested in. A logical way to define this region is to give the perceptron a center and specify a radius around it, anything inside this area it will care about. A perceptron's parameters wont allow this, so the parametrisation must be adapted.
 
 \section{Normal \& Point Parametrisation}
 To define our radius of interest we will start by describing it as a radius around some point. Leading us to the following definition.
@@ -199,18 +199,22 @@ Figure \ref{fig:boundaryhunter-l1-01} shows a boundary hunter trained with equat
   \hfill
 \end{figure}
 
-The boundary hunter has learnt to care about all the data 
+The boundary hunter has learnt to care about all the data which is the opposite of the goal.
 
 \subsection{Discussion}
-Let $l_i = R(r, i) (t_i log(\widehat{t_i}) + (1-t_i)log(1 - \widehat{t_i})) + (1-R(r, n)) log(1/2)$. In figure \ref{fig:boundaryhunter-l1-01} the boundary hunter has a high responsibility for every example, reducing \ref{equ:loss1} to the standard cross entropy loss
+Figure \ref{fig:boundaryhunter-l1-01} shows the boundary hunter has a high responsibility for every example, reducing \ref{equ:loss1} to the standard cross entropy loss
 
 \begin{align*}
 L = -\frac{1}{N} \sum_{n=0}^N R(r, n) (t_n log(\widehat{t_n}) + (1-t_n)log(1 - \widehat{t_n}))
 \end{align*} 
 
-The boundary hunter is ignoring the modification made to allow the it to ignore examples. Indicating that the penalty for an incorrect classification is to low, the boundary hunter can achieve a good loss and still have miss classifications. Ideally the boundary hunter would have a perfect classification accuracy and choose to ignore any data which compromises this.
+The optimal solution allows miss classifications indicating that the penalty for taking a guess and getting it wrong is to low. Ideally the boundary hunter would have a perfect classification accuracy and choose to ignore any data which compromises this.
 
 \section{Loss Function Design: Attempt 2}
+The ideal solution for a boundary hunter is to achieve a perfect classification accuracy for all points with a high responsibility. Anything with a low responsibility does not significantly effect the boundary hunter.\\
+
+The border of area of interest is where the most significant change in responsibility happens and  consequently is the most useful location for deciding on changes to the radius, because any point deep in our area of interest or far from the area will have responsibility close to 1 or close to 0 retrespectively.
+
 Based on our previous findings a more in depth consideration of a suitable loss function is required. Essentially we want to reward our boundary hunter if it is an expert in a given region, so if it gets things wrong outside its area of interest that's good, and if it gets things correct outside its area of interest then that's bad. Consider the following properties of our ideal loss function.
 
 \begin{enumerate}

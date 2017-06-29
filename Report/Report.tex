@@ -27,7 +27,7 @@
 \begin{titlingpage}
     \maketitle
     \begin{abstract}
-    	Training a Multi Layer Perceptron (MLP) Network to solve supervised learning problems is common practice. When a problem is composed of subtasks then using an MLP Network has poor learning. The paper Adaptive Mixtures of Local Experts \cite{jacobs1991adaptive} proposes a Mixture of Experts model to solve this which is used in practice. This report speculates that decoupling the expert networks will further improve learning. The solution developed in this paper is a model where experts can be dynamically trained as needed, it is able to perform well in low dimensions but encounters problems with learning as the number grows.
+    	Training a Multi Layer Perceptron (MLP) Network to solve supervised learning problems is common practice. When a problem is composed of subtasks then using an MLP Network has poor learning. The paper Adaptive Mixtures of Local Experts \cite{jacobs1991adaptive} proposes a Mixture of Experts model to solve this which is used in practice. This report speculates that decoupling the expert networks will further improve learning. The model developed in this paper allows experts to be dynamically trained and added as needed, it is able to perform well in low dimensions but encounters problems with learning as the number grows.
     \end{abstract}
 \end{titlingpage}
 
@@ -167,7 +167,7 @@ A list of properties for $R$ follows.
 
 A logical choice for $R$ is the logistic function, $f = 1 - \frac{1}{1 + e^{-S(x - x_0)}}$ where S is the steepness. $f$ meets requirements (1) - (4). The steepness can be thought of this as how rapidly our interest changes at the border of our region, a steep function means we rapidly move from caring to ignoring an example, where as a more gradual slope means it takes longer for us to loose interest.\\
 
-The sigmoid function guarantees that any example will have $R(r, i) > \frac{1}{2}$, $R(r, i) < \frac{1}{2}$, $R(r, i) = \frac{1}{2}$ if it is inside, outside or on the border retrospectively. As $S \rightarrow \infty$ then the responsibility approaches a step function, being 1 for any example inside the boundary hunters region and 0 otherwise. If the steepness is to low then examples far away from the boundary hunter will have to much of an impact, on the other hand if its to high then the boundary hunter wont consider any example its not interested in. \text{So why did I pick 10?}
+The sigmoid function guarantees that any example will have $R(r, i) > \frac{1}{2}$, $R(r, i) < \frac{1}{2}$, $R(r, i) = \frac{1}{2}$ if it is inside, outside or on the border retrospectively. As $S \rightarrow \infty$ then the responsibility approaches a step function, being 1 for any example inside the boundary hunters region and 0 otherwise. If the steepness is to low then examples far away from the boundary hunter will have to much of an impact, on the other hand if its to high then the boundary hunter wont consider any example its not interested in. From inspecting the graphs for various steepnesses $S = 10$ is a goood place to start, the responsibility decays rappidly but slow enough to consider a range of points in/out side the area of interest.
 
 \begin{align}
 R(r, i) = 1 - \frac{1}{1 + e^{-10(d_i-r)}}
@@ -777,11 +777,11 @@ Until $n = 7$ the Hyperplane BH is able to perform at least as well as the gener
 Any future work would first have to understand what is causing this issue. 
 
 \chapter{Conclusion}
-Locating local features in the data and ignoring everything else, a seemingly simple enough problem quickly became a difficult  balancing act of reward vs penalty. After multiple iterations of attempting to design a loss we concluded that this was not a promising avenue to follow.\\
+Locating local features in the data and ignoring everything else, a seemingly simple enough problem quickly became a difficult  balancing act of reward vs penalty. After attempting to design a loss which encouraged local learning we concluded that this was not a promising avenue to follow.\\
 
 Using the idea of RBF Networks we where able to develop similar models of boundary hunters but this was not quite solving the problem we had in mind, the network structure meant there was some dependency between the hidden neurons. Removing the network and individually training these boundary hunter neurons did not initially have the results we wanted, after adding biases which where learned along side the weights we started to see the boundary hunters learning local features. Some tests on simple noisy data also proved promising.\\
 
-Testing in higher dimensions revealed problems which where not seen on the 2D toy examples. Learning boundary hunters becomes difficult for $n > 7$.
+Testing in higher dimensions revealed problems which where not seen on the 2D toy examples. Learning boundary hunters becomes difficult for $n > 7$. Consqeuently one remaining question is, what causes the diffcultys in learning when the number of dimentions increases?
 
 This report has demonstrated that the concept of a boundary hunter is plausible but while there is difficulty learning in higher dimensions they can not be used in practice.
 

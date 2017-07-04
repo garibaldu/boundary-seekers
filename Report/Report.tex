@@ -242,15 +242,7 @@ Equation \ref{equ:final-de-dw-l1} substutes in the derivitation of $\frac{\parti
 \end{aligned}
 \end{equation}
 
-The equation \ref{equ:final-de-dw-l1} demonstraits why this loss function does not achieve the desired results. The responsibility becomes an multiplier on the learning rate, consequently the boundary hunter is optimizing the standard cross entropy loss. The same can be shown for the gradients $\frac{\partial E}{\partial \partial m_i}$
-
-Figure \ref{fig:boundaryhunter-l1-01} shows the boundary hunter has a high responsibility for every example, reducing \ref{equ:loss1} to the standard cross entropy loss
-
-\begin{align*}
-L = -\frac{1}{N} \sum_{n=0}^N R(r, n) (t_n log(\widehat{t_n}) + (1-t_n)log(1 - \widehat{t_n}))
-\end{align*} 
-
-The solution which the boundary hunter converged on allows miss classifications, indicating that the penalty for taking a guess and getting it wrong is to low.
+The equation \ref{equ:final-de-dw-l1} demonstraits why this loss function does not achieve the desired results. The responsibility becomes an multiplier on the learning rate not effecting the direction of the gradient (as its always positive), consequently the boundary hunter is optimizing the standard cross entropy loss. It can also be shown the responsibility has no effect on the gradients $\frac{\partial E}{\partial \partial m_i}$.\\
 
 \section{Loss Function Design: Attempt 2}
 Consider the boundary hunter as a salesperson, who gets paid $\$B$ for selling something to someone who wants it (if the salesperson is responsible for this individual) and gets penalized $\$C$ dollars for selling something to someone who does not want it. Using this model, the salesperson is to position them selves and adjust their responsibility so that they are maximizing there profit.\\
@@ -793,7 +785,7 @@ Locating local features in the data and ignoring everything else, a seemingly si
 
 Using the idea of RBF Networks we where able to develop similar models of boundary hunters but this was not quite solving the problem we had in mind, the network structure meant there was some dependency between the hidden neurons. Removing the network and individually training these boundary hunter neurons did not initially have the results we wanted, after adding biases which where learned along side the weights we started to see the boundary hunters learning local features. Some tests on simple noisy data also proved promising.\\
 
-Testing in higher dimensions revealed problems which where not seen on the 2D toy examples. Learning boundary hunters becomes difficult for $n > 7$. Consqeuently one remaining question is, what causes the diffcultys in learning when the number of dimentions increases?
+Testing in higher dimensions revealed problems which where not seen on the 2D toy examples. Learning boundary hunters becomes difficult for $n > 7$. Consqeuently one remaining question is, what causes the diffcultys in learning when the number of dimentions increases?\\
 
 This report has demonstrated that the concept of a boundary hunter is plausible but while there is difficulty learning in higher dimensions they can not be used in practice.
 
